@@ -92,7 +92,7 @@ dial-cr-replication/
 | `03_phase2_empirical.R` | Tables 4-5 rows 5-8 |
 | `04_synthetic_table1.R` | `results/table1_results.csv`, Table 1 |
 | `05_montecarlo_table6.R` | `results/table6_results.csv`, Table 6 |
-| `06_structural_table7.R` | Table 2, `paper/figures/sim_dial_scenarios.png` |
+| `06_structural_table7.R` | Table 7, `paper/figures/sim_dial_scenarios.png` |
 | `07_power_curve_grid.R` | `results/cp_grid/`, Figure 2 power curves |
 | `08_figures.R` | `paper/figures/fig0_dial_architecture.png`, `fig1_diagnostic_space.png`, `fig3_domain_sensitivity.png` |
 
