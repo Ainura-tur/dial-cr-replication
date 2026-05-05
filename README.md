@@ -50,7 +50,7 @@ dial-cr-replication/
 │   ├── 03_phase2_empirical.R       Tables 4-5: Papke, NHANES, Card, MovieLens
 │   ├── 04_synthetic_table1.R       Table 1: MCUB identified sets (synthetic)
 │   ├── 05_montecarlo_table6.R      Table 6: Monte Carlo coverage results
-│   ├── 06_structural_table2.R      Table 2: structural simulation (DIAL scenarios)
+│   ├── 06_structural_table7.R      Table 2: structural simulation (DIAL scenarios)
 │   ├── 07_power_curve_grid.R       Figure 2 (power curves): parallelised MC grid
 │   ├── 08_figures.R                Figures 1, 3, 4: architecture and empirical plots
 │   ├── cr_wrapper.R                unified CR test entry point (all scenarios)
@@ -92,7 +92,7 @@ dial-cr-replication/
 | `03_phase2_empirical.R` | Tables 4-5 rows 5-8 |
 | `04_synthetic_table1.R` | `results/table1_results.csv`, Table 1 |
 | `05_montecarlo_table6.R` | `results/table6_results.csv`, Table 6 |
-| `06_structural_table2.R` | Table 2, `paper/figures/sim_dial_scenarios.png` |
+| `06_structural_table7.R` | Table 2, `paper/figures/sim_dial_scenarios.png` |
 | `07_power_curve_grid.R` | `results/cp_grid/`, Figure 2 power curves |
 | `08_figures.R` | `paper/figures/fig0_dial_architecture.png`, `fig1_diagnostic_space.png`, `fig3_domain_sensitivity.png` |
 
@@ -107,7 +107,7 @@ dial-cr-replication/
 | `03_phase2_empirical.R` | 20-40 minutes |
 | `04_synthetic_table1.R` | 5 minutes |
 | `05_montecarlo_table6.R` | 4-8 hours |
-| `06_structural_table2.R` | 3 minutes per row |
+| `06_structural_table7.R` | 3 minutes per row |
 | `07_power_curve_grid.R` | 75 minutes (parallelised) |
 | `08_figures.R` | 2 minutes |
 

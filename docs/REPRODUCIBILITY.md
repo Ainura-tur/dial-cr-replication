@@ -103,7 +103,7 @@ can be resumed without restarting from scratch.
 ## Step 6: Table 2 (structural simulation, DIAL scenarios)
 
 ```r
-Rscript scripts/06_structural_table2.R
+Rscript scripts/06_structural_table7.R
 ```
 
 Runs the four DIAL scenarios (A, B, C, W) using the DoubleML and ivcrtest
