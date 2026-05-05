@@ -17,7 +17,7 @@ DIAL paper from a fresh clone of this repository.
 ## Step 0: Clone and set up
 
 ```r
-git clone https://github.com/Ainura-tur/dial-cr-replication.git
+git clone https://anonymous.4open.science/r/dial-cr-replication.git
 cd dial-cr-replication
 Rscript scripts/00_setup.R
 ```

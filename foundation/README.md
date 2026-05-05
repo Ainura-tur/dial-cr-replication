@@ -30,7 +30,7 @@ Implements the four Phase 1 empirical analysis functions:
 ## Provenance
 
 These files are from the CR test and MCUB inference codebase developed by
-Dzhumashev and Tursunalieva (2026) and are bundled here solely to make the
+the CR test paper authors (2026) and are bundled here solely to make the
 DIAL replication self-contained. They are included under the same license
 terms as the original work. If the upstream repository is public at time of
 reading, the canonical source is:
