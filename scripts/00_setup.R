@@ -63,7 +63,9 @@ install_if_missing(cran_pkgs)
 cat("[OK] All packages installed.\n\n")
 
 # ---- 2. ivcrtest (GitHub) ---------------------------------------------------
-
+# ivcrtest is a third-party R package implementing the CR test and MCUB
+# inference (Dzhumashev & Tursunalieva 2026). The GitHub account ratbekd
+# belongs to the package author, not to any author of this paper.
 if (!requireNamespace("ivcrtest", quietly = TRUE)) {
   cat("Installing ivcrtest from GitHub...\n")
   remotes::install_git("https://github.com/ratbekd/ivcrtest.git")
