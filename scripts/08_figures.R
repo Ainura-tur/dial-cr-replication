@@ -48,11 +48,7 @@ suppressPackageStartupMessages({
 cat("Generating Figure 1: DIAL architecture diagram...\n")
 
 png(file.path(FIG_DIR, "fig1_dial_architecture.png"),
-    width = 3400, height = 2800, res = 300)
-
-par(mar = c(0.2, 0.2, 0.6, 0.2), family = "sans")
-plot.new()
-plot.window(xlim = c(0, 100), ylim = c(0, 100))
+    width = 3400, height = 2400, res = 300)
 
 rrect <- function(x, y, w, h, fill, bdr, lwd = 1.5)
   rect(x - w/2, y - h/2, x + w/2, y + h/2, col = fill, border = bdr, lwd = lwd)
@@ -70,6 +66,11 @@ arr_L_HV <- function(x1, y1, x2, y2, col = "gray35", lwd = 1.4) {
   arrows(x2, y1, x2, y2, length = 0.08, angle = 22, col = col, lwd = lwd)
 }
 
+arr_L_VH <- function(x1, y1, x2, y2, col = "gray35", lwd = 1.4) {
+  segments(x1, y1, x1, y2, col = col, lwd = lwd)
+  arrows(x1, y2, x2, y2, length = 0.08, angle = 22, col = col, lwd = lwd)
+}
+
 cA  <- "#7FC97F"; cAb <- "#3D8A3D"
 cB  <- "#7FAEDC"; cBb <- "#2A6FB7"
 cC  <- "#F4A09A"; cCb <- "#C9433D"
@@ -79,86 +80,97 @@ cR  <- "#E1DDF5"; cRb <- "#6E64C2"; cRt <- "#3C3489"
 cT  <- "#D8EFE5"; cTb <- "#3FA083"; cTt <- "#0F6E56"
 cF  <- "#FCE3BC"; cFb <- "#E08826"; cFt <- "#9C5A0E"
 
-xData <- 50; yData <- 95
-xDML <- 22; xIV <- 70; yEst <- 84
-xF <- 70; yF <- 71
-xCR <- 50; yCR <- 57
-xRat <- 22; yRat <- 46
-xR <- 22; yR <- 35
-xA <- 9; xB <- 35; xC <- 78; yOut <- 22
+par(mar = c(0.1, 0.1, 0.4, 0.1), family = "sans")
+plot.new()
+plot.window(xlim = c(0, 100), ylim = c(8, 100))
 
-text(50, 99, "DIAL diagnostic framework", cex = 1.30, font = 2, col = "gray10")
+xData <- 50;  yData <- 94
+xDML  <- 22;  xFS <- 70;  yEst <- 84
+xF    <- 70;  yF   <- 73
+xCR   <- 50;  yCR  <- 62
+xIV2  <- 50;  yIV2 <- 52
+xRat  <- 22;  yRat <- 41
+xR    <- 22;  yR   <- 32
+xA <- 9;  xB <- 35;  xC <- 78;  yOut <- 20
 
-rrect(xData, yData, 30, 4, cBg, cBgb, lwd = 1.4)
-text(xData, yData, "Observed data  (Y, D, Z, X)", col = "gray15", cex = 0.95, font = 2)
+text(50, 98, "DIAL diagnostic framework", cex = 1.1, font = 2, col = "gray10")
 
-rrect(xDML, yEst, 16, 5.5, cE, cEb, lwd = 1.4)
-text(xDML, yEst + 1.1, "DML",   col = cEt, cex = 0.95, font = 2)
-text(xDML, yEst - 1.3, "(ATE)", col = cEt, cex = 0.65)
+rrect(xData, yData, 28, 3.2, cBg, cBgb, lwd = 1.3)
+text(xData, yData, "Observed data  (Y, D, Z, X)", col = "gray15", cex = 0.9, font = 2)
 
-rrect(xIV, yEst, 16, 5.5, cE, cEb, lwd = 1.4)
-text(xIV, yEst + 1.1, "IV",     col = cEt, cex = 0.95, font = 2)
-text(xIV, yEst - 1.3, "(LATE)", col = cEt, cex = 0.65)
+arr_L_HV(xData - 14, yData - 1.8, xDML, yEst + 2.5)
+arr_L_HV(xData + 14, yData - 1.8, xFS,  yEst + 2.5)
 
-arr_L_HV(xData - 15, yData - 1.7, xDML, yEst + 3, col = "gray35")
-arr_L_HV(xData + 15, yData - 1.7, xIV,  yEst + 3, col = "gray35")
+rrect(xDML, yEst, 15, 4.5, cE, cEb, lwd = 1.3)
+text(xDML, yEst + 1,   "DML",   col = cEt, cex = 0.9, font = 2)
+text(xDML, yEst - 1.2, "(ATE)", col = cEt, cex = 0.6)
 
-arr(xIV, yEst - 3, xIV, yF + 4)
-diam(xF, yF, 16, 7, cF, cFb)
-text(xF, yF + 0.7, "Weak IV test", col = cFt, cex = 0.70, font = 2)
-text(xF, yF - 1.3, "F < 10 ?",     col = cFt, cex = 0.72, font = 2)
+arr(xDML, yEst - 2.5, xDML, yRat + 2.75)
 
-arr_L_HV(xF - 8, yF, xCR, yCR + 4.3, col = "gray35")
-text((xF - 8 + xCR)/2, yF + 1.6, "No", col = "gray30", cex = 0.65, font = 2)
+rrect(xFS, yEst, 15, 4.5, cE, cEb, lwd = 1.3)
+text(xFS, yEst + 1,   "First stage", col = cEt, cex = 0.80, font = 2)
+text(xFS, yEst - 1.2, "D ~ Z, X",   col = cEt, cex = 0.60)
 
-arr_L_HV(xF + 8, yF, xC + 5, yOut + 4.5, col = cCb, lwd = 1.4)
-text(xF + 11, yF + 1.6, "Yes", col = cCb, cex = 0.65, font = 2)
+arr(xFS, yEst - 2.5, xF, yF + 3.25)
 
-diam(xCR, yCR, 22, 8.5, cR, cRb)
-text(xCR, yCR + 1.0, "CR test (MCUB)", col = cRt, cex = 0.78, font = 2)
-text(xCR, yCR - 1.4, expression(0 %in% hat(C) * "?"), col = cRt, cex = 0.78)
+diam(xF, yF, 15, 6, cF, cFb)
+text(xF, yF + 0.6, "Weak IV test", col = cFt, cex = 0.68, font = 2)
+text(xF, yF - 1.2, "F < 10 ?",    col = cFt, cex = 0.70, font = 2)
 
-xPassDrop <- xRat + 7
-segments(xCR - 11, yCR, xPassDrop, yCR, col = cAb, lwd = 1.4)
-arrows(xPassDrop, yCR, xPassDrop, yRat + 3, length = 0.08, angle = 22, col = cAb, lwd = 1.4)
-text((xCR - 11 + xPassDrop)/2, yCR + 1.3, "Pass", col = cAb, cex = 0.65, font = 2)
+arr_L_HV(xF - 7.5, yF, xCR, yCR + 3.75)
+text((xF - 7.5 + xCR) / 2, yF + 1.3, "No", col = "gray30", cex = 0.6, font = 2)
 
-arr_L_HV(xCR + 11, yCR, xC - 6, yOut + 4.5, col = cCb, lwd = 1.4)
-text((xCR + 11 + xC - 6)/2, yCR + 1.6, "Fail", col = cCb, cex = 0.65, font = 2)
+arr_L_HV(xF + 7.5, yF, xC + 5, yOut + 4)
+text(xF + 10, yF + 1.3, "Yes", col = cCb, cex = 0.6, font = 2)
 
-arr(xDML, yEst - 3, xDML, yRat + 3, col = "gray35")
+diam(xCR, yCR, 20, 7, cR, cRb)
+text(xCR, yCR + 0.9, "CR test (MCUB)", col = cRt, cex = 0.75, font = 2)
+text(xCR, yCR - 1.2, expression(0 %in% hat(C) * "?"), col = cRt, cex = 0.75)
 
-rrect(xRat, yRat, 22, 6, cT, cTb, lwd = 1.4)
-text(xRat, yRat + 1.1, "Effect ratio (R)", col = cTt, cex = 0.78, font = 2)
-text(xRat, yRat - 1.4,
-     expression(group("|", hat(beta)[IV]/hat(beta)[DML], "|")),
-     col = cTt, cex = 0.70)
+arr_L_HV(xCR + 10, yCR, xC - 6, yOut + 4)
+text((xCR + 10 + xC - 6) / 2, yCR + 1.3, "Fail", col = cCb, cex = 0.6, font = 2)
 
-arr(xRat, yRat - 3.1, xR, yR + 4)
+arr(xCR, yCR - 3.75, xIV2, yIV2 + 2.5)
+text(xCR + 3.5, (yCR - 3.75 + yIV2 + 2.5) / 2, "Pass", col = cAb, cex = 0.6, font = 2)
 
-diam(xR, yR, 17, 9, cF, cFb)
-text(xR, yR + 1.2, expression("R" %~~% "1 ?"), col = cFt, cex = 0.80, font = 2)
+rrect(xIV2, yIV2, 20, 4.5, cE, cEb, lwd = 1.3)
+text(xIV2, yIV2 + 1,
+     expression(hat(beta)[IV] ~ "(2SLS)"), col = cEt, cex = 0.75, font = 2)
+text(xIV2, yIV2 - 1.2, "(LATE)", col = cEt, cex = 0.6)
 
-arr_L_HV(xR - 8.6, yR, xA, yOut + 4.5, col = cAb, lwd = 1.4)
-text(xR - 11, yR + 1.5, "Yes", col = cAb, cex = 0.65, font = 2)
+arr_L_VH(xIV2, yIV2 - 2.5, xRat + 10, yRat)
 
-arr_L_HV(xR + 8.6, yR, xB, yOut + 4.5, col = cBb, lwd = 1.4)
-text(xR + 11, yR + 1.5, "No", col = cBb, cex = 0.65, font = 2)
+rrect(xRat, yRat, 20, 5, cT, cTb, lwd = 1.3)
+text(xRat, yRat + 1, "Effect ratio (R)", col = cTt, cex = 0.75, font = 2)
+text(xRat, yRat - 1.2,
+     expression(group("|", hat(beta)[IV] / hat(beta)[DML], "|")),
+     col = cTt, cex = 0.68)
 
-rrect(xA, yOut, 15, 9, cA, cAb, lwd = 1.5)
-text(xA, yOut + 2.4, "A",               col = "white",   cex = 1.30, font = 2)
-text(xA, yOut - 0.3, "Global valid IV",  col = "#0F4F0F", cex = 0.62, font = 2)
-text(xA, yOut - 2.2, expression("ATE" %~~% "LATE"), col = "#0F4F0F", cex = 0.65)
+arr(xRat, yRat - 2.75, xR, yR + 4)
 
-rrect(xB, yOut, 14, 9, cB, cBb, lwd = 1.5)
-text(xB, yOut + 2.4, "B",     col = "white",   cex = 1.30, font = 2)
-text(xB, yOut - 0.3, "Local", col = "#0E2E55", cex = 0.65, font = 2)
-text(xB, yOut - 2.2, expression("LATE" != "ATE"), col = "#0E2E55", cex = 0.65)
+diam(xR, yR, 16, 7, cF, cFb)
+text(xR, yR + 0.2, expression("R" %~~% "1 ?"), col = cFt, cex = 0.75, font = 2)
 
-rrect(xC, yOut, 16, 9, cC, cCb, lwd = 1.5)
-text(xC, yOut + 2.4, "C",               col = "white",   cex = 1.30, font = 2)
-text(xC, yOut - 0.3, "IV unreliable",   col = "#5C1612", cex = 0.65, font = 2)
-text(xC, yOut - 2.2, "Weak or invalid", col = "#5C1612", cex = 0.62)
+arr_L_HV(xR - 8, yR, xA, yOut + 4)
+text(xR - 10.5, yR + 1.5, "Yes", col = cAb, cex = 0.6, font = 2)
+
+arr_L_HV(xR + 8, yR, xB, yOut + 4)
+text(xR + 10.5, yR + 1.5, "No",  col = cBb, cex = 0.6, font = 2)
+
+rrect(xA, yOut, 14, 7, cA, cAb)
+text(xA, yOut + 2.1, "A",               col = "white",   cex = 1.2, font = 2)
+text(xA, yOut - 0.2, "Global valid IV",  col = "#0F4F0F", cex = 0.6, font = 2)
+text(xA, yOut - 2,   expression("ATE" %~~% "LATE"), col = "#0F4F0F", cex = 0.6)
+
+rrect(xB, yOut, 13, 8, cB, cBb)
+text(xB, yOut + 2.1, "B",     col = "white",   cex = 1.2, font = 2)
+text(xB, yOut - 0.2, "Local",  col = "#0E2E55", cex = 0.6, font = 2)
+text(xB, yOut - 2,   expression("LATE" != "ATE"), col = "#0E2E55", cex = 0.6)
+
+rrect(xC, yOut, 15, 7, cC, cCb)
+text(xC, yOut + 2.1, "C",             col = "white",   cex = 1.2, font = 2)
+text(xC, yOut - 0.2, "IV unreliable",  col = "#5C1612", cex = 0.6, font = 2)
+text(xC, yOut - 2,   "Weak or invalid", col = "#5C1612", cex = 0.6)
 
 dev.off()
 cat("Saved: fig1_dial_architecture.png\n")
@@ -177,15 +189,15 @@ if (!file.exists(csv_path)) {
 } else {
   dat <- read.csv(csv_path, stringsAsFactors = FALSE)
   cat(sprintf("  Loaded %d cells from cp_grid_summary_lean.csv\n", nrow(dat)))
-  
+
   ns     <- sort(unique(dat$n))
   n_labs <- paste0("n=", formatC(ns, format = "d", big.mark = ","))
-  
+
   dat$n_label <- factor(
     paste0("n=", formatC(dat$n, format = "d", big.mark = ",")),
     levels = n_labs
   )
-  
+
   NCOLORS <- c(
     "n=1,107"  = "#1F77B4",
     "n=1,534"  = "#2CA02C",
@@ -193,7 +205,7 @@ if (!file.exists(csv_path)) {
     "n=10,000" = "#D62728",
     "n=50,000" = "#9467BD"
   )
-  
+
   # Interpolated 50%-crossing per n
   delta_star <- dat %>%
     arrange(n, delta) %>%
@@ -207,7 +219,7 @@ if (!file.exists(csv_path)) {
       data.frame(delta_star = d[i] + t * (d[i+1] - d[i]))
     }) %>%
     ungroup()
-  
+
   theme_fig2 <- function() {
     theme_minimal(base_size = 11) +
       theme(
@@ -218,7 +230,7 @@ if (!file.exists(csv_path)) {
         plot.margin      = margin(5, 5, 5, 5)
       )
   }
-  
+
   # Panel a: full power curves, linear x-axis
   p_a <- ggplot(dat, aes(x = delta, y = cp_raw,
                          colour = n_label, group = n_label)) +
@@ -248,11 +260,11 @@ if (!file.exists(csv_path)) {
       y     = expression(CP[n](delta))
     ) +
     theme_fig2()
-  
+
   # Panel b: transition zone zoom
   zoom_lo <- 0.125; zoom_hi <- 0.200
   dat_zoom <- dat %>% filter(delta >= zoom_lo & delta <= zoom_hi)
-  
+
   p_b <- ggplot(dat_zoom, aes(x = delta, y = cp_raw,
                               colour = n_label, group = n_label)) +
     geom_hline(yintercept = 0.5, linetype = "dotted",
@@ -283,7 +295,7 @@ if (!file.exists(csv_path)) {
       y     = expression(CP[n](delta))
     ) +
     theme_fig2()
-  
+
   # Panel c: CI width
   p_c <- ggplot(dat, aes(x = delta, y = ci_w_mean,
                          colour = n_label, group = n_label)) +
@@ -304,11 +316,11 @@ if (!file.exists(csv_path)) {
       y     = expression("Mean width of " * widehat(C)[MCUB])
     ) +
     theme_fig2()
-  
+
   combined <- (p_a | p_b | p_c) +
     plot_layout(guides = "collect") &
     theme(legend.position = "bottom")
-  
+
   ggsave(file.path(FIG_DIR, "fig2_combined.png"), combined,
          width = 16, height = 4.8, units = "in", dpi = 300)
   cat("Saved: fig2_combined.png\n")
@@ -435,18 +447,12 @@ fig4$nudge_x[fig4$label == "Burde\nbuildschool"]      <- -0.06
 fig4$nudge_x[fig4$label == "MovieLens\nrelease_year"] <- -0.04
 
 p4 <- ggplot(fig4, aes(x = x, y = ratio)) +
-  # Use geom_rect with a dummy data frame so coord_cartesian does not clip them:
-  geom_rect(data = data.frame(
-    xmin = c(0.5, 0.5, -0.35),
-    xmax = c(1.30, 1.30, 0.5),
-    ymin = c(0.0, 1.5, 0.0),
-    ymax = c(1.5, 4.5, 4.5),
-    fill = c(cA, cB, cC),
-    alpha = c(0.08, 0.06, 0.05)
-  ),
-  aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax,
-      fill = I(fill), alpha = I(alpha)),
-  inherit.aes = FALSE)  +
+  annotate("rect", xmin = 0.5, xmax = 1.30, ymin = 0.0, ymax = 1.5,
+           fill = cA, alpha = 0.08) +
+  annotate("rect", xmin = 0.5, xmax = 1.30, ymin = 1.5, ymax = 4.5,
+           fill = cB, alpha = 0.06) +
+  annotate("rect", xmin = -0.35, xmax = 0.5, ymin = 0.0, ymax = 4.5,
+           fill = cC, alpha = 0.05) +
   geom_vline(xintercept = 0.5, linetype = "dashed", color = "gray50") +
   annotate("segment", x = 0.5, xend = 1.30, y = 1.5, yend = 1.5,
            linetype = "dashed", color = "gray50", linewidth = 0.3) +
