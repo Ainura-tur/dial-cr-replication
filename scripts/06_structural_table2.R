@@ -120,8 +120,21 @@ suppressPackageStartupMessages({
 # returning identical MCUB across different prior ranges (verified by
 # byte-comparing two runs with rxu_range = c(0, 0.8) and c(0, 0.95)).
 
-FOUNDATION_FILES <- normalizePath(c("Fin_sim3_clean.R",
-                                    "Fin_Empirical5_clean.R"))
+.script_dir <- tryCatch(
+  dirname(normalizePath(sys.frame(1)$ofile)),
+  error = function(e) {
+    args <- commandArgs(trailingOnly = FALSE)
+    f    <- sub('--file=', '', args[grep('--file=', args)])
+    if (length(f) && nchar(f)) dirname(normalizePath(f))
+    else getwd()
+  }
+)
+.repo_root <- normalizePath(file.path(.script_dir, '..'))
+
+FOUNDATION_FILES <- c(
+  file.path(.repo_root, 'foundation', 'Fin_sim3_clean.R'),
+  file.path(.repo_root, 'foundation', 'Fin_Empirical5_clean.R')
+)
 
 assign("DIAL_SKIP_AUTORUN", TRUE, envir = .GlobalEnv)
 for (.f in FOUNDATION_FILES) {

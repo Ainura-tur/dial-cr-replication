@@ -79,9 +79,22 @@ MASTER_SEED   <- 1234L
 # FOUNDATION SOURCE
 # ==============================================================================
 
-FOUNDATION_FILES <- normalizePath(c("Fin_sim3_clean.R",
-                                    "Fin_Empirical5_clean.R",
-                                    "DIAL_NeurIPS_JP_dgp.R"))
+.script_dir <- tryCatch(
+  dirname(normalizePath(sys.frame(1)$ofile)),
+  error = function(e) {
+    args <- commandArgs(trailingOnly = FALSE)
+    f    <- sub('--file=', '', args[grep('--file=', args)])
+    if (length(f) && nchar(f)) dirname(normalizePath(f))
+    else getwd()
+  }
+)
+.repo_root <- normalizePath(file.path(.script_dir, '..'))
+
+FOUNDATION_FILES <- c(
+  file.path(.repo_root, 'foundation', 'Fin_sim3_clean.R'),
+  file.path(.repo_root, 'foundation', 'Fin_Empirical5_clean.R')
+  ,file.path(.repo_root, 'scripts', 'jp_dgp.R')
+)
 
 assign("DIAL_SKIP_AUTORUN", TRUE, envir = .GlobalEnv)
 for (.f in FOUNDATION_FILES) {

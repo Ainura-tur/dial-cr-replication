@@ -26,9 +26,20 @@
 rm(list = ls())
 
 # ---- Paths --------------------------------------------------------------
-WRAPPER_PATH <- "DIAL_NEURIPS_CR_wrapper.R"
-SIM3_PATH    <- "Fin_sim3_clean.R"
-EMP5_PATH    <- "Fin_Empirical5_clean.R"
+.script_dir <- tryCatch(
+  dirname(normalizePath(sys.frame(1)$ofile)),
+  error = function(e) {
+    args <- commandArgs(trailingOnly = FALSE)
+    f    <- sub('--file=', '', args[grep('--file=', args)])
+    if (length(f) && nchar(f)) dirname(normalizePath(f))
+    else getwd()
+  }
+)
+.repo_root <- normalizePath(file.path(.script_dir, '..'))
+
+SIM3_PATH    <- file.path(.repo_root, 'foundation', 'Fin_sim3_clean.R')
+EMP5_PATH    <- file.path(.repo_root, 'foundation', 'Fin_Empirical5_clean.R')
+WRAPPER_PATH <- file.path(.repo_root, 'scripts',    'cr_wrapper.R')
 
 stopifnot(file.exists(WRAPPER_PATH), file.exists(SIM3_PATH),
           file.exists(EMP5_PATH))

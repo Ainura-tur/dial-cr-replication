@@ -842,8 +842,19 @@ run_all_scenarios <- function(
 # SECTION 12 — Quick-start reference
 #
 # DIAL_SKIP_AUTORUN <- TRUE
-source("Fin_sim3_clean.R")
-source("Fin_Empirical5_clean.R")
+.script_dir <- tryCatch(
+  dirname(normalizePath(sys.frame(1)$ofile)),
+  error = function(e) {
+    args <- commandArgs(trailingOnly = FALSE)
+    f    <- sub('--file=', '', args[grep('--file=', args)])
+    if (length(f) && nchar(f)) dirname(normalizePath(f))
+    else getwd()
+  }
+)
+.repo_root <- normalizePath(file.path(.script_dir, '..'))
+
+source(file.path(.repo_root, 'foundation', 'Fin_sim3_clean.R'))
+source(file.path(.repo_root, 'foundation', 'Fin_Empirical5_clean.R'))
 source("DIAL_NEURIPS_CR_wrapper.R")
 check_sources_loaded()
 #

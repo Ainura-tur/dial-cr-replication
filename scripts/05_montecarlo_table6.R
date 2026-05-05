@@ -92,13 +92,28 @@ TIMING_LOG  <- file.path(normalizePath("."), "table6_timing.csv")
 if (!dir.exists(CACHE_DIR)) dir.create(CACHE_DIR, recursive = TRUE)
 
 # [FAST-2] Workers do NOT source Fin_sim3_clean.R
-WORKER_FILES <- normalizePath(c("Fin_Empirical5_clean.R",
-                                "DIAL_NeurIPS_JP_dgp.R"))
+.script_dir <- tryCatch(
+  dirname(normalizePath(sys.frame(1)$ofile)),
+  error = function(e) {
+    args <- commandArgs(trailingOnly = FALSE)
+    f    <- sub('--file=', '', args[grep('--file=', args)])
+    if (length(f) && nchar(f)) dirname(normalizePath(f))
+    else getwd()
+  }
+)
+.repo_root <- normalizePath(file.path(.script_dir, '..'))
+
+WORKER_FILES <- c(
+  file.path(.repo_root, 'foundation', 'Fin_Empirical5_clean.R'),
+  file.path(.repo_root, 'scripts',    'jp_dgp.R')
+)
 
 # Main session still needs sim3 for calibrate_lambda / JP_INSTRUMENT_GRID
-MAIN_FILES <- normalizePath(c("Fin_sim3_clean.R",
-                              "Fin_Empirical5_clean.R",
-                              "DIAL_NeurIPS_JP_dgp.R"))
+MAIN_FILES <- c(
+  file.path(.repo_root, 'foundation', 'Fin_sim3_clean.R'),
+  file.path(.repo_root, 'foundation', 'Fin_Empirical5_clean.R'),
+  file.path(.repo_root, 'scripts',    'jp_dgp.R')
+)
 
 cat("================================================================================\n")
 cat("DIAL Table 6: Monte Carlo Validation (J-P DGP, per-row sign elicitation) v2-LEAN\n")
