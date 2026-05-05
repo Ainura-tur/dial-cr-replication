@@ -106,7 +106,7 @@ can be resumed without restarting from scratch.
 Rscript scripts/06_structural_table7.R
 ```
 
-Runs the four DIAL scenarios (A, B, C, W) using the DoubleML and ivcrtest
+Runs the four DIAL structural scenarios using the DoubleML and ivcrtest
 pipeline.
 
 **Output:** `paper/figures/sim_dial_scenarios.png`, `paper/figures/sim_dial_estimates.png`  
