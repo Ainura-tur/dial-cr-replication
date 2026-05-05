@@ -29,9 +29,9 @@
 # VERDICT
 #   Tolerance-based zero-in-MCUB on CI_Bei.
 #   Two-sided tolerance: zero is "in MCUB" iff
-#     (ci_lo <= ZERO_TOL) AND (ci_hi >= -ZERO_TOL)
+#     (ci_lo <= ZEROTOL) AND (ci_hi >= -ZEROTOL)
 #   so the test handles positive-D and negative-D MCUBs symmetrically.
-#   ZERO_TOL = 0.05.
+#   ZEROTOL = 0.05.
 #
 # COMPARISON BASELINE
 #   HSIC test of independence between z and the IV residual e_hat = y - beta_IV * x.
@@ -70,7 +70,7 @@ N             <- 20000L
 TARGET_COR_XU <- 0.30          # |rho_xu| target; sign set per-DGP
 COR_ZX        <- 0.25
 ALPHA         <- 0.10
-ZERO_TOL      <- 0.05
+ZEROTOL      <- 0.05
 RXU_POS       <- c(0, 0.80)    # used when lambda > 0 (cor_zu >= 0)
 RXU_NEG       <- c(-0.80, 0)   # used when lambda < 0 (cor_zu  < 0)
 MASTER_SEED   <- 1234L
@@ -101,8 +101,8 @@ cat(sprintf("  n = %d, |target cor(x,u)| = %.2f, cor(z,x) = %.2f\n",
             N, TARGET_COR_XU, COR_ZX))
 cat(sprintf("  D for lambda>0: (%.2f, %.2f)   D for lambda<0: (%.2f, %.2f)\n",
             RXU_POS[1], RXU_POS[2], RXU_NEG[1], RXU_NEG[2]))
-cat(sprintf("  alpha = %.2f, ZERO_TOL = %.2f, master seed = %d\n",
-            ALPHA, ZERO_TOL, MASTER_SEED))
+cat(sprintf("  alpha = %.2f, ZEROTOL = %.2f, master seed = %d\n",
+            ALPHA, ZEROTOL, MASTER_SEED))
 cat(sprintf("  Instrument grid: cor(z,u) in {%s}\n",
             paste(sprintf("%+.2f", JP_INSTRUMENT_GRID), collapse = ", ")))
 cat("\n")
@@ -215,7 +215,7 @@ run_one_instrument <- function(j) {
   
   # Two-sided tolerance: handles positive and negative D symmetrically.
   zero_in_tol <- !is.na(ci_lo) && !is.na(ci_hi) &&
-    (ci_lo <= ZERO_TOL) && (ci_hi >= -ZERO_TOL)
+    (ci_lo <= ZEROTOL) && (ci_hi >= -ZEROTOL)
   cr_verdict  <- if (is.na(ci_lo) || is.na(ci_hi)) "?"
   else if (zero_in_tol) "A" else "C"
   

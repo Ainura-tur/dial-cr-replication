@@ -311,12 +311,12 @@ run_dial <- function(df, label = "", seed = 42L, dml_override = NULL) {
   # converges to its valid-instrument relation, but never crosses
   # below zero in expectation). At finite n, sampling noise puts the
   # lower bound at 0 +/- O(n^-1/2). The "zero in MCUB" test should
-  # therefore use a tolerance ZERO_TOL roughly equal to the
+  # therefore use a tolerance ZEROTOL roughly equal to the
   # asymptotic SE on the relevant correlation, ~1.96/sqrt(n).
   # The empirical gap between valid rows (lower bound ~ 0) and invalid
   # rows (lower bound ~ 0.6+) is large, so a generous tolerance like
   # 0.05 cleanly separates them at any moderate n.
-  ZERO_TOL <- 0.05
+  ZEROTOL <- 0.05
   ci_lo <- NA_real_
   if (!is.na(ident_set) && ident_set != "?") {
     m <- regmatches(ident_set,
@@ -324,7 +324,7 @@ run_dial <- function(df, label = "", seed = 42L, dml_override = NULL) {
                             ident_set))[[1]]
     if (length(m) >= 3L) ci_lo <- as.numeric(m[2L])
   }
-  zero_in_tol <- !is.na(ci_lo) && (ci_lo <= ZERO_TOL)
+  zero_in_tol <- !is.na(ci_lo) && (ci_lo <= ZEROTOL)
   
   # --- DIAL classification (tolerance-based zero-in-MCUB) ---
   ratio <- abs(beta_iv) / abs(beta_dml)
@@ -360,7 +360,7 @@ run_dial <- function(df, label = "", seed = 42L, dml_override = NULL) {
 # ==============================================================================
 
 n             <- 50000L   # n=50000 is sufficient with the tolerance-
-# based zero-in-MCUB criterion (ZERO_TOL=0.05
+# based zero-in-MCUB criterion (ZEROTOL=0.05
 # in run_dial). Earlier iterations chased
 # n=100000 trying to push the CI_Bei lower
 # bound strictly below zero, but that's

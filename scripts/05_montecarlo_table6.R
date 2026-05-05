@@ -72,7 +72,7 @@ N             <- 5000L
 R_PER_INSTR   <- 1000L        # set to 50L for a sanity check
 TARGET_COR_XU <- 0.30
 COR_ZX        <- 0.25
-ZERO_TOL      <- 0.05         # verdict: 0 in CI iff lo <= ZERO_TOL & hi >= -ZERO_TOL
+ZEROTOL      <- 0.05         # verdict: 0 in CI iff lo <= ZEROTOL & hi >= -ZEROTOL
 ALPHA         <- 0.10
 RXU_POS       <- c( 0.00,  0.80)
 RXU_NEG       <- c(-0.80,  0.00)
@@ -108,8 +108,8 @@ cat(sprintf("  |target cor(x,u)| = %.2f,  cor(z,x) = %.2f\n",
             TARGET_COR_XU, COR_ZX))
 cat(sprintf("  D pos = [%.2f, %.2f]   D neg = [%.2f, %.2f]\n",
             RXU_POS[1], RXU_POS[2], RXU_NEG[1], RXU_NEG[2]))
-cat(sprintf("  alpha = %.2f,  ZERO_TOL = %.2f,  master seed = %d\n",
-            ALPHA, ZERO_TOL, MASTER_SEED))
+cat(sprintf("  alpha = %.2f,  ZEROTOL = %.2f,  master seed = %d\n",
+            ALPHA, ZEROTOL, MASTER_SEED))
 cat(sprintf("  B_mcub = %d,  Blarge = %d,  B_boot = %d\n",
             B_MCUB, BLARGE, B_BOOT))
 cat(sprintf("  Workers = %d,  cache dir: %s\n\n", N_WORKERS, CACHE_DIR))
@@ -266,7 +266,7 @@ one_rep <- function(rep_seed, instr,
   
   lo <- res$CI_h[1]; hi <- res$CI_h[2]
   
-  # Verdict: relaxed zero-coverage (ZERO_TOL neighbourhood)
+  # Verdict: relaxed zero-coverage (ZEROTOL neighbourhood)
   zin     <- (lo <= zero_tol) && (hi >= -zero_tol)
   verdict <- if (zin) "A" else "C"
   
@@ -330,7 +330,7 @@ for (j in seq_along(INSTR_GRID)) {
       alpha          = ALPHA,
       rxu_pos        = RXU_POS,
       rxu_neg        = RXU_NEG,
-      zero_tol       = ZERO_TOL,
+      zero_tol       = ZEROTOL,
       b_mcub         = B_MCUB,        # [FAST-1]
       blarge         = BLARGE,
       b_boot         = B_BOOT,
