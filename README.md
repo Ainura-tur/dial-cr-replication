@@ -50,7 +50,7 @@ dial-cr-replication/
 │   ├── 03_phase2_empirical.R       Tables 4-5: Papke, NHANES, Card, MovieLens
 │   ├── 04_synthetic_table1.R       Table 1: MCUB identified sets (synthetic)
 │   ├── 05_montecarlo_table6.R      Table 6: Monte Carlo coverage results
-│   ├── 06_structural_table7.R      Table 2: structural simulation (DIAL scenarios)
+│   ├── 06_structural_table7.R      Table 7: structural simulation (DIAL scenarios)
 │   ├── 07_power_curve_grid.R       Figure 2 (power curves): parallelised MC grid
 │   ├── 08_figures.R                Figures 1, 3, 4: architecture and empirical plots
 │   ├── cr_wrapper.R                unified CR test entry point (all scenarios)
