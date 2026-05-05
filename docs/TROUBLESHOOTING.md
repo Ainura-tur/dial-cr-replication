@@ -42,11 +42,12 @@ sourcing has no effect on auto-runs that have already started.
 ---
 ## Note on `ratbekd` and `ivcrtest`
 
-The GitHub account `ratbekd` and the `ivcrtest` package are third-party
-infrastructure from the CR test paper (Dzhumashev & Tursunalieva 2026).
-This account belongs to the upstream package author and is unrelated to
-the authors of this submission. See `foundation/README.md` for full
+The GitHub account `ratbekd` is the upstream author of the `ivcrtest` package
+implementing the CR test and MCUB inference (Dzhumashev & Tursunalieva 2026).
+This package is a third-party dependency cited in the paper; it is not part of
+the replication codebase introduced here. See `foundation/README.md` for
 provenance details.
+
 ## `iv_cr_test` argument mismatch or rxu_range error
 
 **Cause:** Different versions of the `ivcrtest` package have different
