@@ -29,13 +29,11 @@ Implements the four Phase 1 empirical analysis functions:
 
 ## Provenance
 
-These files are from the CR test and MCUB inference codebase developed by
-the CR test paper authors (2026) and are bundled here solely to make the
-DIAL replication self-contained. They are included under the same license
-terms as the original work. If the upstream repository is public at time of
-reading, the canonical source is:
-
-  https://github.com/ratbekd/ivcrtest
+These files are from the CR test and MCUB inference codebase cited as
+reference [13] in the paper and are bundled here solely to make the
+DIAL replication self-contained. They are included under the same
+license terms as the original work. The canonical source URL and full
+author attribution will be provided in the camera-ready version.
 
 ## Required source order
 
