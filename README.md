@@ -126,12 +126,21 @@ dial-cr-replication/
 
 All datasets are publicly available. Three are loaded directly via R packages
 (`wooldridge`, `CrossScreening`). The remainder are downloaded from the
-original supplement mirrors listed in `data/README.md`. MovieLens 100K is
-downloaded at runtime from the GroupLens server; do not re-host it.
+original supplement mirrors listed in `data/README.md`. MovieLens 100K is downloaded at runtime from the GroupLens server
+and should not be re-hosted.
 
 ---
 
+## Note on code provenance
+
+The `foundation/` directory contains the upstream CR test and MCUB
+inference implementation that the DIAL pipeline depends on. This code
+originates from a third-party R package cited in the paper (reference 13).
+Full attribution will be provided in the camera-ready version. This
+dependency is the reason the submission cannot be made fully anonymous.
+
 ## Anonymisation note
 
-This repository is submitted anonymously for review. After acceptance, the
-permanent URL and author information will be added here.
+This repository is submitted anonymously for peer review.
+Author information and the permanent repository URL will be
+added in the camera-ready version.
