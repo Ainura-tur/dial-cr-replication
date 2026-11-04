@@ -15,7 +15,7 @@
 #   Phase 1 covers the four .dta-loaded studies:
 #     - Di Tella & Schargrodsky (2013)   -- 2 instruments
 #     - Galiani et al. (2011)            -- 1 instrument
-#     - Banerjee et al. (2007)           -- 1 instrument
+#     - Banerjee & Iyer (2005)           -- 1 instrument
 #     - Burde & Linden (2013)            -- 1 instrument + cross-sign diagnostic
 #
 #   Phase 2 (MovieLens, Papke, NHANES, Card) is run separately by
@@ -321,7 +321,7 @@ if (identical(getOption("dial.boot_unit"), "raw")) {
 }
 
 .run_banerjee <- function() {
-  cat("\n--- Banerjee et al. (2007) ---\n")
+  cat("\n--- Banerjee & Iyer (2005) ---\n")
   out <- list()
   cat("  Canonical: (-0.6, -0.4)\n")
   res1 <- tryCatch(run_banerjee_analysis_fixed(rxu_range = c(-0.6, -0.4)),

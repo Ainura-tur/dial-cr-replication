@@ -956,13 +956,16 @@ if (.dial_autorun) {
 #================================================================
 # BANERJEE — canonical c(-0.6, -0.4)
 #
-#   The negative domain reflects negative endogeneity between the
-#   intensity of land redistribution and unobserved village-level
-#   institutional quality (see the paper, Appendix B).
+#   Data of Banerjee and Iyer (2005): share of wheat area under
+#   high-yielding varieties (phwht), share of non-landlord land (p_nland),
+#   and conquest between 1820 and 1856 (instru). The negative domain
+#   follows the selection those authors suggest: landlord systems were
+#   more likely in more fertile areas, so the non-landlord share correlates
+#   negatively with unobserved productivity (see the paper, Appendix B).
 #================================================================
 
 run_banerjee_analysis_fixed <- function(rxu_range = c(-0.6, -0.4)) {
-  cat("\n=== Banerjee et al. Analysis ===\n")
+  cat("\n=== Banerjee & Iyer Analysis ===\n")
   cat(sprintf("  rxu_range = c(%.2f, %.2f)\n", rxu_range[1], rxu_range[2]))
   
   mydata <- read_dta(dial_data_path("yld_sett_aug03.dta"))
