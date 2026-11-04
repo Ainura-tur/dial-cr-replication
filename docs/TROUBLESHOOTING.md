@@ -1,166 +1,68 @@
-# TROUBLESHOOTING.md
+# Troubleshooting
 
-Common errors encountered when running the DIAL replication scripts,
-with causes and fixes.
+Common errors, their causes and fixes.
 
----
+## "required functions not loaded" from 02 or 03
 
-## "Required functions not loaded" or "could not find function"
-
-**Cause:** The foundation files were not sourced in the correct order, or
-were sourced without setting `DIAL_SKIP_AUTORUN <- TRUE` first.
-
-**Fix:** In any interactive session, always begin with:
+The foundation files were not sourced first. Scripts 02 and 03 define
+functions only. Start a fresh R session in `scripts/` and run:
 
 ```r
 DIAL_SKIP_AUTORUN <- TRUE
-source("foundation/Fin_sim3_clean.R")
-source("foundation/Fin_Empirical5_clean.R")
+source("../foundation/Fin_sim3_clean.R")
+source("../foundation/Fin_Empirical5_clean.R")
+source("02_phase1_empirical.R")      # or 03_phase2_empirical.R
 ```
 
-`Fin_sim3_clean.R` must come first. Functions such as `CIhybrid`,
-`ci_simple_union`, `g_xu_safe`, and `check_compatibility_simple` are
-defined across both files and the empirical file calls functions from
-the simulation file.
+Then call `run_phase1_all()` or `run_all_phase2_applications()`.
 
----
+## Long runs start as soon as a foundation file is sourced
 
-## Long unexpected auto-runs when sourcing foundation files
+`DIAL_SKIP_AUTORUN <- TRUE` was not set before the first `source()` call.
+Setting it afterwards does not stop a run that has started. Restart R and
+set the flag first.
 
-**Cause:** `DIAL_SKIP_AUTORUN` was not set before sourcing. Both foundation
-files check for this flag and run full Monte Carlo blocks if it is absent.
+## "Data file not found"
 
-**Fix:** Set the flag before any `source()` call:
+`dial_data_path()` could not find a `.dta` file. It looks in
+`getOption("dial.data_dir")`, then in `data/` at the repository root. Run
+the scripts from `scripts/`, or set
+`options(dial.data_dir = "path/to/data")`.
 
-```r
-DIAL_SKIP_AUTORUN <- TRUE
-```
+## "nhanes_mercury.csv not found"
 
-This must be done in the same session before sourcing; setting it after
-sourcing has no effect on auto-runs that have already started.
-
----
-## Note on `ratbekd` and `ivcrtest`
-
-The GitHub account `ratbekd` is the upstream author of the `ivcrtest` package
-implementing the CR test and MCUB inference (Dzhumashev & Tursunalieva 2026).
-This package is a third-party dependency cited in the paper; it is not part of
-the replication codebase introduced here. See `foundation/README.md` for
-provenance details.
-
-## `iv_cr_test` argument mismatch or rxu_range error
-
-**Cause:** Different versions of the `ivcrtest` package have different
-argument names. Some versions do not accept `rxu_range` directly in
-`iv_cr_test()`; others do not expose a bootstrap size parameter `B`.
-
-**Fix:** Use `check_compatibility_simple()` from `Fin_Empirical5_clean.R`
-rather than calling `iv_cr_test()` directly. The wrapper handles argument
-detection automatically. If you must call `iv_cr_test()` directly, run:
-
-```r
-names(formals(ivcrtest::iv_cr_test))
-```
-
-to see which arguments your installed version accepts.
-
----
-
-## `multisession` workers crash or produce NA results (script 07)
-
-**Cause:** Too many parallel workers for the available memory, or a
-worker-level error that is silently swallowed.
-
-**Fix:** Reduce `N_WORKERS` at the top of `scripts/07_power_curve_grid.R`.
-Start with `N_WORKERS <- 2` to confirm correctness, then increase. The
-script caches each cell to `results/cp_grid/` so completed cells are not
-rerun after a crash.
-
----
-
-## NHANES data missing columns
-
-**Cause:** The `CrossScreening` package version on your machine has a
-different schema for `nhanes.fish`, or the package is not installed.
-
-**Fix:**
-
-```r
-install.packages("CrossScreening")
-library(CrossScreening)
-data(nhanes.fish)
-names(nhanes.fish)
-```
-
-The script expects: `o.LBXTHG`, `fish`, `income`, `education`, `age`,
-`gender`. If column names differ, edit the mapping section at the top of
-`scripts/01_build_nhanes.R`.
-
----
+Run `Rscript 01_nhanes_build.R` from `scripts/` first. Scripts 03 and 09
+read the file from the working folder.
 
 ## MovieLens download fails
 
-**Cause:** Network access to `files.grouplens.org` is blocked, or the URL
-has changed.
+Script 03 reads `u.data` and `u.item` from GroupLens when no local copy is
+given. Without internet access, download `ml-100k.zip` from
+https://grouplens.org/datasets/movielens/100k/, unzip it into
+`scripts/ml-100k/`, and call
+`run_all_phase2_applications(ml_dir = "ml-100k")`. Script 09 uses
+`scripts/ml-100k/` automatically when the folder exists.
 
-**Fix:** Download `ml-100k.zip` manually from:
+## Parallel workers fail or return NA
 
-  https://grouplens.org/datasets/movielens/100k/
+The scripts use `future` multisession workers (up to 7, one fewer than the
+physical cores). If workers run out of memory, lower `N_WORKERS` at the top
+of the script (05, 07, 09, 10). The bootstrap rule takes its worker count
+from `dial_boot_plan()`: in 02 and 03, call `dial_boot_plan(2)` after
+sourcing the script and before running it; in 04 and 06, change the
+script's `dial_boot_plan()` call to `dial_boot_plan(2)`. Completed cells
+and resamples are cached, so a rerun resumes where the failed run stopped.
 
-Then unzip it to `data/movielens100k/ml-100k/` and set `extract_dir` in
-`run_movielens_analysis_fixed()` to point to that path.
+## Results differ slightly from the paper
 
----
+The MCUB critical values come from simulation, so set endpoints can move
+in the third decimal between computers, and the bootstrap share p_hat_B
+by a few resamples. Stale caches can also cause differences after you
+edit the code: delete the relevant folder in `results/` (see
+[REPRODUCIBILITY.md](REPRODUCIBILITY.md), section 4) and rerun.
 
-## `.dta` file download fails (Di Tella, Galiani, Burde, Banerjee)
+## Figure 2 is missing
 
-**Cause:** Network access to the GitHub mirror is blocked, or the file
-has been moved.
-
-**Fix:** Download the `.dta` files manually from:
-
-  https://github.com/ratbekd/Orientation_paper
-
-Place them in the corresponding `data/<study>/` subdirectory and update
-the `loader` function URL in `scripts/02_phase1_empirical.R` or
-`scripts/cr_wrapper.R` to use a local `haven::read_dta("data/...")` call.
-
----
-
-## `Matrix::nearPD` warning or error
-
-**Cause:** The bootstrap covariance matrix of the correlation triple is
-not positive definite due to small sample size or near-constant variables.
-
-**Fix:** This is usually a data quality issue. Check for constant or
-near-constant variables in your instrument or outcome:
-
-```r
-apply(df[, c("x","y","z")], 2, var)
-```
-
-If variances are near zero, the instrument has no first-stage variation
-and the analysis cannot proceed for that sample.
-
----
-
-## `CIhybrid` produces non-finite values or very wide intervals
-
-**Cause:** The correlation triple `(rho_xy, rho_xz, rho_yz)` is near the
-boundary of the feasible region, or the bootstrap covariance estimate is
-poorly conditioned with small n.
-
-**Fix:** Increase `B_LARGE` (default 5000) and `B` (default 500) in the
-call to `CIhybrid()`, or increase the sample size. For the empirical
-applications this is not adjustable, but for simulations you can increase
-`N` in `generate_data()`.
-
----
-
-## Bracketed paste corruption in Git Bash on Windows
-
-**Cause:** Pasting multi-line commands into Git Bash with Ctrl+V inserts
-`^[[200~` before the command, corrupting it.
-
-**Fix:** Right-click in the Git Bash window and choose **Paste** from the
-context menu instead of using Ctrl+V.
+`08_figures.R` draws Figure 2 from `results/cp_grid_summary_lean.csv`,
+which `07_power_curve_grid.R` writes. Run 07 first, or keep the CSV that
+the repository ships.

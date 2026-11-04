@@ -1,10 +1,10 @@
 # ==============================================================================
-# DIAL_NeurIPS_JP_dgp.R  --  Shared Jones-Pewsey DGP for Table 1 and Table 6
+# jp_dgp.R  --  Shared Jones-Pewsey DGP (tab:synthetic, tab:mc, tab:rule_mc)
 # ------------------------------------------------------------------------------
-# Implements the synthetic DGP described in Section "Data Generating Process"
-# of the NeurIPS submission. Used by:
-#   - DIAL_NeurIPS_table1_MCUB_sets.R   (Table 1 synthetic benchmark)
-#   - DIAL_NeurIPS_MonteCarlo.R          (Table 6 Monte Carlo validation)
+# Implements the synthetic DGP of the paper (Appendix D.1). Used by:
+#   - scripts/04_synthetic_benchmark.R   (tab:synthetic)
+#   - scripts/05_montecarlo_validation.R (tab:mc)
+#   - scripts/10_rule_montecarlo.R       (tab:rule_mc)
 #
 # DGP summary
 # -----------

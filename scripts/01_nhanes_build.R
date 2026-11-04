@@ -1,31 +1,27 @@
 # ==============================================================================
-# nhanes_build.R  -  Build the NHANES analytic frame for DIAL Table 4
+# 01_nhanes_build.R  -  Build the NHANES analytic frame (tab:empirical_full)
 # ==============================================================================
 #
 # PURPOSE
-#   Reproduces the n = 1,107 NHANES analytic extract used for the
-#   "income" and "education" instrument rows of Table 4 (NHANES Fish
-#   Consumption, Zhao et al. 2018 extract).
-#
-#   This is the script cited by name in the paper:
-#       "the NHANES analytic frame is constructed by nhanes_build.R in
-#        the supplementary material, which reads data(nhanes.fish) from
-#        the CrossScreening R package (the same 1,107-row extract
-#        documented in Rosenbaum 2014, Zhao et al. 2018)."
+#   Builds the n = 1,107 NHANES analytic extract used for the "income" and
+#   "education" instrument rows of tab:empirical_full (NHANES fish
+#   consumption; the extract of Zhao et al. 2018). It reads
+#   data(nhanes.fish) from the CrossScreening R package, the same
+#   1,107-row extract documented in Rosenbaum (2014) and Zhao et al. (2018).
 #
 # OUTPUT
-#   nhanes_mercury.csv  -- 1,107-row analytic frame with columns:
-#       log_mercury, fish_freq, income, education, age, female, bmi
+#   nhanes_mercury.csv in the working folder (run from scripts/), with
+#   columns log_mercury, fish_freq, income, education, age, female, bmi
 #
-# DOWNSTREAM CONSUMERS
-#   DIAL_NeurIPS_fin_empirical5_phase2a.R::run_nhanes_analysis_fixed()
-#   reads this CSV from the working directory.
+# USED BY
+#   03_phase2_empirical.R (run_nhanes_analysis_fixed()) and
+#   09_implied_endogeneity.R
 #
 # REQUIRES
 #   CrossScreening R package (Zhao et al. 2018; CRAN)
 #
-# RUN
-#   Rscript nhanes_build.R
+# RUN (from scripts/)
+#   Rscript 01_nhanes_build.R
 # ==============================================================================
 
 if (!requireNamespace("CrossScreening", quietly = TRUE)) {
@@ -132,7 +128,7 @@ cat(sprintf("Analytic frame: %d rows -> %d rows after complete-case filter.\n",
 if (n_post != 1107L) {
   warning(sprintf(paste(
     "Analytic frame has %d rows, expected 1,107 (Zhao et al. 2018).",
-    "If this is a CrossScreening version skew, downstream Table 4",
+    "If this is a CrossScreening version skew, the downstream NHANES",
     "rows for income/education will be slightly off.", sep = "\n  "),
     n_post))
 }

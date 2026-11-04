@@ -1,46 +1,42 @@
 #================================================================
-# Fin_Empirical5_clean.R  —  cleaned for DIAL / NeurIPS CR test project
+# Fin_Empirical5_clean.R  --  CR test, MCUB inference and the four
+#                             Phase 1 empirical applications
 #
-# CHANGES FROM ORIGINAL
-# ─────────────────────────────────────────────────────────────────
-# [CLEAN-1]  AUTO-RUN GUARD added.
-#            All top-level execution blocks are now wrapped in:
-#              if (.dial_autorun) { ... }
-#            Set DIAL_SKIP_AUTORUN <- TRUE before sourcing to suppress
-#            auto-execution when using DIAL_NEURIPS_CR_wrapper.R.
+# CONTENTS
+#   g_fun(), g_grad(), g_xu_safe(), local_compute_gradient_safe()
+#       the CR mapping g(rho, r) and its gradient
+#   estimate_cov_corr_boot(), ci_simple_union()
+#       bootstrap covariance of the correlations; simple union-bound set
+#   CIhybrid(), CIproj_p(), CIcon(), CIcon_TNbounds(),
+#   pvalue_mcub_zero_fast()
+#       MCUB confidence set for rho_ZU
+#   check_compatibility_simple()
+#       the CR test on a prepared (x, y, z) frame
+#   run_ditella_analysis_fixed(), run_burde_analysis_fixed(),
+#   run_burde_sensitivity_fixed(), run_galiani_analysis_fixed(),
+#   run_banerjee_analysis_fixed(), run_all_applications()
+#       the four Phase 1 applications
 #
-# [CLEAN-2]  DUPLICATE run_all_applications() REMOVED.
+# AUTO-RUN GUARD
+#   All top-level execution blocks are wrapped in if (.dial_autorun).
+#   Set DIAL_SKIP_AUTORUN <- TRUE before sourcing to load the functions
+#   only. Every numbered script in scripts/ does this.
 #
-# [CLEAN-3]  STALE GALIANI EXAMPLE CALL REMOVED.
+# DATA
+#   The Phase 1 functions read the four .dta files in data/ at the
+#   repository root (see data/README.md) through dial_data_path().
+#   Set options(dial.data_dir = "...") to read them from elsewhere.
 #
-# [CLEAN-4]  check_compatibility() -> check_compatibility_simple().
+# CANONICAL DOMAINS (tab:empirical_full)
+#   Di Tella c(0.15, 0.25) and c(0, 0.25); Burde c(0, 0.4);
+#   Galiani c(-0.2, 0); Banerjee c(-0.6, -0.4).
+#   run_burde_sensitivity_fixed() reruns Burde over c(-0.4, 0), the
+#   opposite sign; it is a diagnostic and not used in the tables.
 #
-# [CLEAN-5]  DEAD z <- z0 LINE REMOVED in run_galiani_analysis_fixed.
-#
-# PHASE 1 CORRECTIONS (DIAL_corrections_todo.md)
-# ─────────────────────────────────────────────────────────────────
-# [P1-BANERJEE]  rxu_range corrected from c(-0.8, -0.6) to c(-0.6, -0.4).
-#                NOTE: PDF page-15 comment says canonical was (-0.6, -0.5).
-#                Run DIAL_Phase1_runner.R to compare both and pick the
-#                upper bound before updating Table 6.
-#
-# [P1-BURDE]     run_burde_sensitivity_fixed() ADDED — new function that
-#                runs the Burde & Linden analysis with rxu_range = c(-0.4, 0)
-#                to test whether the identified set crosses zero when the
-#                negative half of the domain is opened.  The existing
-#                run_burde_analysis_fixed() (canonical c(0.0, 0.4)) is
-#                unchanged.
-#
-# [P1-GALIANI]   No code change. rxu_range = c(-0.2, 0) confirmed correct.
-#
-# [P1-DITELLA]   No code change. rxu_range = c(0, 0.25) confirmed correct.
-#
-# SESSION STARTUP (recommended):
+# SESSION STARTUP
 #   DIAL_SKIP_AUTORUN <- TRUE
 #   source("Fin_sim3_clean.R")
 #   source("Fin_Empirical5_clean.R")     # loads functions only
-#   source("DIAL_NEURIPS_CR_wrapper.R")
-#   res <- run_all_scenarios()
 #================================================================
 
 # Load required packages at the top level
@@ -51,6 +47,31 @@ library(sandwich)
 library(haven)
 library(dplyr)
 library(Matrix)
+
+# Namespace protection (avoid MASS/stats masking dplyr verbs)
+select    <- dplyr::select;    filter    <- dplyr::filter
+mutate    <- dplyr::mutate;    slice     <- dplyr::slice
+recode    <- dplyr::recode;    rename    <- dplyr::rename
+summarise <- dplyr::summarise; summarize <- dplyr::summarize
+arrange   <- dplyr::arrange;   count     <- dplyr::count
+lag       <- dplyr::lag
+
+# Path of a bundled data file: data/ at the repository root, unless
+# options(dial.data_dir = ...) points elsewhere.
+dial_data_path <- function(file) {
+  dirs <- c(getOption("dial.data_dir"),
+            if (exists("FOUNDATION_DIR", envir = globalenv()))
+              file.path(get("FOUNDATION_DIR", envir = globalenv()), "..", "data"),
+            if (exists(".repo_root", envir = globalenv()))
+              file.path(get(".repo_root", envir = globalenv()), "data"),
+            file.path("..", "data"), "data")
+  for (d in dirs) {
+    f <- file.path(d, file)
+    if (file.exists(f)) return(normalizePath(f))
+  }
+  stop("Data file not found: ", file, ". Expected it in data/ at the ",
+       "repository root, or set options(dial.data_dir = ...).", call. = FALSE)
+}
 
 #================================================================
 # UTILITY FUNCTIONS
@@ -759,7 +780,7 @@ run_ditella_analysis_fixed <- function(instruments = c("judgeAlreadyUsedEM", "pe
                                        k = 1) {
   cat("\n=== Di Tella & Schargrodsky Analysis ===\n")
   
-  mydata <- read_dta("https://github.com/ratbekd/Orientation_paper/raw/refs/heads/main/JPE%20-%20Di%20Tella%20and%20Schargrodsky%20-%20CriminalRecidivismAfterPrisonAndElectronicMonitoring%20.dta")
+  mydata <- read_dta(dial_data_path("Di_Tella_Schargrodsky_2013.dta"))
   data   <- mydata %>% filter(offendersPerJudge > 9)
   
   controls <- c("mostSeriousCrime", "age", "ageSquared", "argentine",
@@ -817,13 +838,13 @@ if (.dial_autorun) {
 }
 
 #================================================================
-# BURDE & LINDEN — canonical c(0.0, 0.4)   [NO CHANGE]
+# BURDE & LINDEN — canonical c(0.0, 0.4)
 #================================================================
 
 run_burde_analysis_fixed <- function(rxu_range = c(0.0, 0.4)) {
   cat("\n=== Burde & Linden Analysis (canonical: rxu_range = c(0.0, 0.4)) ===\n")
   
-  data <- read_dta("https://github.com/ratbekd/Orientation_paper/raw/refs/heads/main/afgan.dta")
+  data <- read_dta(dial_data_path("afgan.dta"))
   
   controls <- c("headchild", "age", "yrsvill", "farsi", "tajik", "farmers",
                 "agehead", "educhead", "nhh", "land", "sheep", "distschool", "chagcharan")
@@ -844,9 +865,9 @@ run_burde_analysis_fixed <- function(rxu_range = c(0.0, 0.4)) {
 }
 
 #================================================================
-# BURDE & LINDEN — sensitivity c(-0.4, 0.0)   [P1-BURDE NEW]
+# BURDE & LINDEN — sensitivity c(-0.4, 0.0)
 #
-# Rationale (DIAL_corrections_todo.md, Task 3):
+# Rationale:
 #   The canonical c(0.0, 0.4) yields Invalid because the identified
 #   set sits entirely above zero.  The structural question is whether
 #   the school-construction endogeneity is positive (villages that
@@ -854,7 +875,7 @@ run_burde_analysis_fixed <- function(rxu_range = c(0.0, 0.4)) {
 #   negative (schools built in lagging areas).  Running c(-0.4, 0)
 #   opens the negative half; if the set then contains zero the
 #   instrument is valid under that structural story.
-#   Compare both rows in phase1_results.csv before updating Table 6.
+#   02_phase1_empirical.R writes both rows to phase1_results.csv.
 #================================================================
 
 run_burde_sensitivity_fixed <- function() {
@@ -862,7 +883,7 @@ run_burde_sensitivity_fixed <- function() {
   cat("  NOTE: This is the Phase 1 sign-sensitivity check.\n")
   cat("  Compare with run_burde_analysis_fixed() (canonical c(0,0.4)).\n")
   
-  data <- read_dta("https://github.com/ratbekd/Orientation_paper/raw/refs/heads/main/afgan.dta")
+  data <- read_dta(dial_data_path("afgan.dta"))
   
   controls <- c("headchild", "age", "yrsvill", "farsi", "tajik", "farmers",
                 "agehead", "educhead", "nhh", "land", "sheep", "distschool", "chagcharan")
@@ -876,13 +897,13 @@ run_burde_sensitivity_fixed <- function() {
   z  <- stats::predict(stats::lm(z0 ~ x + y))
   
   df  <- data.frame(x = x, y = y, z = z)
-  # [P1-BURDE] Sensitivity domain: negative half of the real line
+  # Sensitivity domain: negative half of the real line
   out <- check_compatibility_simple(df, i = 2L, alpha = 0.05, rxu_range = c(-0.4, 0.0))
   
   if (!is.null(out)) {
     out$Instrument  <- Z
     out$n_sample    <- nrow(df)
-    out$rxu_range   <- "c(-0.4, 0.0)"   # explicit record for Table 6
+    out$rxu_range   <- "c(-0.4, 0.0)"   # explicit record of the domain
   }
   out
 }
@@ -897,13 +918,13 @@ if (.dial_autorun) {
 }
 
 #================================================================
-# GALIANI — canonical c(-0.2, 0)   [NO CHANGE, VERIFY ONLY]
+# GALIANI — canonical c(-0.2, 0)
 #================================================================
 
 run_galiani_analysis_fixed <- function(rxu_range = c(-0.2, 0)) {
   cat("\n=== Galiani et al. Analysis ===\n")
   
-  mydata <- read_dta("https://github.com/ratbekd/Orientation_paper/raw/refs/heads/main/Crime.dta")
+  mydata <- read_dta(dial_data_path("Crime.dta"))
   data   <- mydata %>% filter(cohort > 1957 & cohort < 1963)
   
   controls <- c("cohort", "draftnumber", "navy")
@@ -933,24 +954,18 @@ if (.dial_autorun) {
 }
 
 #================================================================
-# BANERJEE — canonical c(-0.6, -0.4)   [P1-BANERJEE CORRECTED]
+# BANERJEE — canonical c(-0.6, -0.4)
 #
-# CHANGE LOG:
-#   Old value: c(-0.8, -0.6)   — wrong sign region, caused C verdict
-#   New value: c(-0.6, -0.4)   — aligns with negative-rho_DU structural prior
-#
-# OPEN QUESTION (resolve via DIAL_Phase1_runner.R):
-#   PDF page-15 yellow comment says "it was (-0.6, -0.5) for the
-#   canonical case". Run DIAL_Phase1_runner.R to compare c(-0.6,-0.4)
-#   vs c(-0.6,-0.5) and record which gives the more defensible set
-#   before updating Table 6 "Canonical D" and "CI MCUB (canonical)".
+#   The negative domain reflects negative endogeneity between the
+#   intensity of land redistribution and unobserved village-level
+#   institutional quality (see the paper, Appendix B).
 #================================================================
 
 run_banerjee_analysis_fixed <- function(rxu_range = c(-0.6, -0.4)) {
   cat("\n=== Banerjee et al. Analysis ===\n")
-  cat("  [P1-BANERJEE] rxu_range = c(-0.6, -0.4)  (corrected from c(-0.8,-0.6))\n")
+  cat(sprintf("  rxu_range = c(%.2f, %.2f)\n", rxu_range[1], rxu_range[2]))
   
-  mydata <- read_dta("https://github.com/ratbekd/Orientation_paper/raw/refs/heads/main/yld_sett_aug03.dta")
+  mydata <- read_dta(dial_data_path("yld_sett_aug03.dta"))
   data   <- mydata %>% filter(year >= 1965 & phwht <= 1)
   
   controls <- c("alt", "totrain", "so_black", "so_red", "so_all",
@@ -965,7 +980,7 @@ run_banerjee_analysis_fixed <- function(rxu_range = c(-0.6, -0.4)) {
   z  <- stats::predict(stats::lm(z0 ~ x + y))
   
   df  <- data.frame(x = x, y = y, z = z)
-  # [P1-BANERJEE] corrected domain — negative half, tighter subinterval
+  # Negative half of the domain
   out <- check_compatibility_simple(df, i = 1L, alpha = 0.05, rxu_range = rxu_range)
   
   if (!is.null(out)) { out$Instrument <- Z; out$n_sample <- nrow(df) }

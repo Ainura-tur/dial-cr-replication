@@ -17,6 +17,14 @@ library(grid)
 library(knitr)
 library('MASS')
 
+# Namespace protection (avoid MASS/stats masking dplyr verbs)
+select    <- dplyr::select;    filter    <- dplyr::filter
+mutate    <- dplyr::mutate;    slice     <- dplyr::slice
+recode    <- dplyr::recode;    rename    <- dplyr::rename
+summarise <- dplyr::summarise; summarize <- dplyr::summarize
+arrange   <- dplyr::arrange;   count     <- dplyr::count
+lag       <- dplyr::lag
+
 fs = function(x,epsilon,delta) dnorm(sinh(delta*asinh(x)-epsilon))*delta*cosh(delta*asinh(x)-epsilon)/sqrt(1+x^2)
 seed=123
 N=800
@@ -1207,18 +1215,14 @@ summarize_sim_results <- function(sim_results) {
 #
 # AUTO-RUN GUARD — same pattern as Fin_Empirical5_clean.R
 #
-# Set DIAL_SKIP_AUTORUN <- TRUE BEFORE sourcing this file when
-# using DIAL_NEURIPS_CR_wrapper.R.  All three monte_carlo_simulation()
-# calls below run on every source() unless this flag is set.
-# Without the flag the three calls take ~10-15 min each time the
-# file is sourced, causing the repeated output seen overnight.
+# Set DIAL_SKIP_AUTORUN <- TRUE BEFORE sourcing this file. All three
+# monte_carlo_simulation() calls below run on every source() unless
+# this flag is set, and they take about 10-15 minutes each.
 #
 # Recommended session startup:
 #   DIAL_SKIP_AUTORUN <- TRUE
 #   source("Fin_sim3_clean.R")
 #   source("Fin_Empirical5_clean.R")
-#   source("DIAL_NEURIPS_CR_wrapper.R")
-#   res <- run_all_scenarios(n_sim = 50)
 #================================================================
 
 .dial_autorun_sim <- !exists("DIAL_SKIP_AUTORUN") || !isTRUE(DIAL_SKIP_AUTORUN)
@@ -1273,5 +1277,5 @@ if (.dial_autorun_sim) {
   
 } else {
   cat("  [Fin_sim3.R] DIAL_SKIP_AUTORUN = TRUE — skipping all MC auto-runs.\n")
-  cat("  Use run_all_scenarios() or scenario2_mc_power() to run simulations.\n")
+  cat("  Call monte_carlo_simulation() to run a simulation.\n")
 }

@@ -1,7 +1,8 @@
 # =============================================================================
 # 07_power_curve_grid.R
 #
-# Lean power-curve MC (based on run5_LEAN + extend).
+# Lean power-curve Monte Carlo for fig:power_curves (the classifiability
+# frontier).
 #
 # Per-rep cost is dominated by a single CIhybrid call. Relative to the full
 # version, three expensive operations are removed:
@@ -9,17 +10,25 @@
 #   2. ci_simple_union        -- 800-rep bootstrap always called first.
 #   3. Duplicate estimate_cov_corr_boot at B = 800 inside ci_simple_union.
 #
-# Workers source only Fin_Empirical5_clean.R, avoiding the heavyweight
-# top-level execution in Fin_sim3_clean.R (stargazer, fGarch, ivreg calls).
+# Workers source only Fin_Empirical5_clean.R.
 #
 # Grid: 35 base delta points + 8 extension points (indices 36-43) that fill
 # in the transition zone for n=1107 and n=50000. Both sets share the same
 # cache directory (results/cp_grid_lean/) and can be run in any order.
 #
+# B_MCUB = 500 draws per bisection step, the same B as the full-sample MCUB
+# sets in the empirical tables; B_large = 499 coverage draws; the covariance
+# bootstrap uses 200 draws. SCHEMA_VERSION = 3.
+#
+# Cache guard: cells carry a SCHEMA_VERSION. A cached cell is reused only if
+# its schema is current; older cells are recomputed and overwritten. You can also delete
+# results/cp_grid_lean/ before rerunning.
+#
 # Usage:
 #   Rscript scripts/07_power_curve_grid.R
 #
-# Runtime: ~75 minutes on 7 cores.
+# Runtime: about 160 minutes on 7 cores with B_MCUB = 500 (base grid about
+# 140 minutes, extension about 20 minutes).
 # =============================================================================
 
 rm(list = ls())
@@ -50,6 +59,14 @@ install_if_missing(c("MASS", "future.apply",
 
 suppressPackageStartupMessages({ library(MASS); library(future.apply) })
 
+# Namespace protection (avoid MASS/stats masking dplyr verbs)
+select    <- dplyr::select;    filter    <- dplyr::filter
+mutate    <- dplyr::mutate;    slice     <- dplyr::slice
+recode    <- dplyr::recode;    rename    <- dplyr::rename
+summarise <- dplyr::summarise; summarize <- dplyr::summarize
+arrange   <- dplyr::arrange;   count     <- dplyr::count
+lag       <- dplyr::lag
+
 # ---- Source EMP5 on main process -------------------------------------------
 DIAL_SKIP_AUTORUN <- TRUE
 source(EMP5_PATH)
@@ -63,13 +80,15 @@ if (length(missing_fns))
 cat("Fin_Empirical5_clean.R loaded OK.\n")
 
 # ---- Parallel backend -------------------------------------------------------
-N_WORKERS <- 7L
+N_WORKERS <- min(7L, max(1L, parallel::detectCores(logical = FALSE) - 1L))
 plan(multisession, workers = N_WORKERS)
 cat(sprintf("Parallel plan: multisession with %d workers\n\n", N_WORKERS))
 
 # =============================================================================
 # Configuration
 # =============================================================================
+
+SCHEMA_VERSION <- 3L  # bump when one_rep logic or cell_result schema changes
 
 N_GRID <- c(1107L, 1534L, 5000L, 10000L, 50000L)
 
@@ -84,9 +103,10 @@ DELTA_GRID <- local({
 })
 stopifnot(length(DELTA_GRID) == 35L)
 
-# 8-point extension: fills in transition zone for n=1107 and n=50000
+# 8-point extension: fills in the transition zone for n=1107 and n=50000.
+# Indices derive from the base grid length so adding anchors is safe.
 EXT_DELTAS  <- c(0.131, 0.132, 0.133, 0.134, 0.167, 0.169, 0.171, 0.173)
-EXT_INDICES <- 36L:43L
+EXT_INDICES <- length(DELTA_GRID) + seq_along(EXT_DELTAS)
 stopifnot(length(EXT_DELTAS) == length(EXT_INDICES))
 
 # R_MC schedule: more reps at small n where curves are plotted
@@ -99,7 +119,7 @@ R_MC_BY_N <- c(
 )
 
 # CIhybrid tuning
-B_MCUB <- 199L   # per-bisection draws
+B_MCUB <- 500L   # per-bisection draws
 BLARGE <- 499L   # c_bd and final coverage draws
 B_BOOT <- 200L   # bootstrap B for estimate_cov_corr_boot
 
@@ -113,6 +133,21 @@ RHO_DU    <- 0.50
 COR_ZD    <- 0.25
 BETA_TRUE <- 0.30
 RXU_RANGE <- c(0.0, 0.80)
+
+# ---- Cache schema guard -----------------------------------------------------
+.check_cache <- function() {
+  fs <- list.files(OUT_DIR, pattern = "\\.rds$", full.names = TRUE)
+  if (!length(fs)) return(invisible(NULL))
+  x <- tryCatch(readRDS(fs[1]), error = function(e) NULL)
+  if (is.null(x)) return(invisible(NULL))
+  cell_schema <- if (is.null(x$schema_version)) 0L else x$schema_version
+  if (cell_schema < SCHEMA_VERSION) {
+    cat("\n*** NOTE: stale cache detected (schema ", cell_schema,
+        " < required ", SCHEMA_VERSION, ")\n", sep = "")
+    cat("Stale cells in ", OUT_DIR, " will be recomputed and overwritten.\n\n", sep = "")
+  }
+}
+.check_cache()
 
 total_base <- length(N_GRID) * length(DELTA_GRID)
 total_ext  <- length(N_GRID) * length(EXT_DELTAS)
@@ -164,16 +199,6 @@ simulate_one <- function(n, delta, rep_seed) {
 
 # =============================================================================
 # Lean one_rep
-#
-# Steps:
-#   1. simulate_one
-#   2. sample correlations
-#   3. estimate_cov_corr_boot at B_BOOT
-#   4. build r_grid / g / Al / Au
-#   5. single CIhybrid call at B_MCUB / BLARGE
-#   6. extract zero_in
-#
-# NOT called: pvalue_mcub_zero_fast, ci_simple_union.
 # =============================================================================
 
 one_rep <- function(rep_seed, n_val, delta,
@@ -279,10 +304,15 @@ run_grid <- function(deltas, indices, label = "") {
       fname <- sprintf("n%05d_d%02d.rds", n_val, d_idx)
       fpath <- file.path(OUT_DIR, fname)
 
+      # Reuse a cached cell only if it was written with the current schema.
       if (file.exists(fpath)) {
-        cat(sprintf("[%3d/%3d]%s n=%d d=%.4f  (cached)\n",
-                    cell_counter, total_cells, label, n_val, delta))
-        next
+        old <- tryCatch(readRDS(fpath), error = function(e) NULL)
+        if (!is.null(old) && !is.null(old$schema_version) &&
+            old$schema_version >= SCHEMA_VERSION) {
+          cat(sprintf("[%3d/%3d]%s n=%d d=%.4f  (cached)\n",
+                      cell_counter, total_cells, label, n_val, delta))
+          next
+        }
       }
 
       t_cell        <- Sys.time()
@@ -314,6 +344,7 @@ run_grid <- function(deltas, indices, label = "") {
       n_errs  <- sum(!is.na(errs))
 
       cell_result <- list(
+        schema_version = SCHEMA_VERSION,
         n            = n_val,      delta       = delta,
         delta_index  = d_idx,      cp_raw      = mean(zero_in,           na.rm = TRUE),
         plug_lo_mean = mean(plug_lo, na.rm = TRUE),
@@ -359,7 +390,7 @@ run_grid(EXT_DELTAS, EXT_INDICES, label = " [ext]")
 # Aggregate all cached cells to summary CSV
 # =============================================================================
 
-ALL_INDICES <- 1L:43L
+ALL_INDICES <- seq_len(length(DELTA_GRID) + length(EXT_DELTAS))
 all_rows <- list(); skipped <- 0L
 
 for (n_val in N_GRID) {

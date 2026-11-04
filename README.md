@@ -1,146 +1,108 @@
 # dial-cr-replication
 
-Replication code for **"DIAL: A Probabilistic Diagnostic for Instrument Validity and Effect Heterogeneity in Causal Machine Learning"** (NeurIPS 2026).
+Replication code for the paper *DIAL: Telling Invalid Instruments from
+Local Effects When IV and DML Disagree*.
 
----
+The scripts refer to tables and figures by their LaTeX labels (for example
+`tab:sim`), so their comments stay correct when floats move. The table
+below also gives the numbers in the submitted version.
+
+## Requirements
+
+- R 4.2 or later.
+- The CRAN packages listed in `scripts/00_setup.R`. The script installs any
+  that are missing.
+- A multi-core CPU. No GPU is needed, and peak memory is under 4 GB. The
+  run times below are for 7 cores.
 
 ## Quick start
 
-```r
-# 1. Clone and open a terminal in the repo root, then start R there.
-# 2. Run in order:
+Run every command from the `scripts/` folder.
 
-Rscript scripts/00_setup.R               # installs packages, smoke-tests foundation
-Rscript scripts/02_phase1_empirical.R    # Tables 4-5: Phase 1 empirical re-runs
-Rscript scripts/08_figures.R             # Figures 1-3
+```sh
+cd scripts
+Rscript 00_setup.R
+Rscript 01_nhanes_build.R
+
+# 02 and 03 define functions; these one-liners load the foundation and run them
+Rscript -e 'DIAL_SKIP_AUTORUN <- TRUE; source("../foundation/Fin_sim3_clean.R"); source("../foundation/Fin_Empirical5_clean.R"); source("02_phase1_empirical.R"); run_phase1_all()'
+Rscript -e 'DIAL_SKIP_AUTORUN <- TRUE; source("../foundation/Fin_sim3_clean.R"); source("../foundation/Fin_Empirical5_clean.R"); source("03_phase2_empirical.R"); run_all_phase2_applications()'
+
+Rscript 04_synthetic_benchmark.R
+Rscript 05_montecarlo_validation.R
+Rscript 06_structural_simulation.R
+Rscript 07_power_curve_grid.R
+Rscript 08_figures.R
+Rscript 09_implied_endogeneity.R
+Rscript 10_rule_montecarlo.R
 ```
 
-For the full pipeline including Monte Carlo and power curves, see
-[docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md).
+Run 05 before 10: script 10 compares the bootstrap rule with the
+single-set verdicts that 05 caches. Run 07 before 08: Figure 2 reads the
+grid summary that 07 writes. [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md)
+gives the details, including how to run 02 and 03 in an interactive session.
 
----
+## Scripts and outputs
 
-## Source order requirement
+| Script | Paper output | Files written | Time (7 cores) |
+|---|---|---|---|
+| `00_setup.R` | none (installs packages, smoke test) | `.setup_complete` | a few minutes on the first run |
+| `01_nhanes_build.R` | NHANES input for Table 3 | `scripts/nhanes_mercury.csv` | seconds |
+| `02_phase1_empirical.R` | Tables 3 and 4: Di Tella, Galiani, Banerjee, Burde | `scripts/phase1_results.csv` | about 2 hours for 02 and 03 together |
+| `03_phase2_empirical.R` | Tables 3 and 4: MovieLens, Papke, NHANES, Card | `scripts/phase2_results.csv` | (see 02) |
+| `04_synthetic_benchmark.R` | Table 1 (`tab:synthetic`) | `scripts/table1_results.csv` | about 45 minutes |
+| `05_montecarlo_validation.R` | Table 7 (`tab:mc`) | `results/table6_results.csv`, `results/table6_timing.csv` | about 3 hours |
+| `06_structural_simulation.R` | Table 9 (`tab:sim`) | `results/sim_dial_v7_results.rds`, `results/coef_vectors.rds` | about 40 minutes |
+| `07_power_curve_grid.R` | data for Figure 2 (`fig:power_curves`) | `results/cp_grid_summary_lean.csv` | about 160 minutes |
+| `08_figures.R` | Figures 1 to 4 | `scripts/paper/figures/fig1_*.png` to `fig4_*.png` | about a minute |
+| `09_implied_endogeneity.R` | Table 5 (`tab:locality`) | `results/implied_endogeneity.csv` | about 20 minutes |
+| `10_rule_montecarlo.R` | Table 8 (`tab:rule_mc`) | `results/rule_mc_results.csv` | about 6 hours |
 
-**This is the most common source of errors.** The foundation files contain
-long-running auto-run blocks that must be suppressed before sourcing. Every
-numbered script sets this automatically, but if you source files manually in
-an interactive session, run this first:
+Table 3 is `tab:empirical_full` and Table 4 is `tab:domain_sens`. Table 2
+(`tab:denotation`) lists notation. Table 6 (`tab:frontier`) comes from a
+closed-form expression; [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md)
+gives the few lines of R that reproduce it. Scripts 04, 05, 06, 09 and 10
+also print their table rows in LaTeX. The output of 05 keeps the table
+number of an earlier layout: `table6_results.csv` holds Table 7.
 
-```r
-DIAL_SKIP_AUTORUN <- TRUE
-source("foundation/Fin_sim3_clean.R")
-source("foundation/Fin_Empirical5_clean.R")
-```
-
-Sourcing in the wrong order or without the flag will trigger unintended
-Monte Carlo runs and produce the "required functions not loaded" error in
-downstream scripts.
-
----
-
-## Repository structure
+## Folder layout
 
 ```
 dial-cr-replication/
-├── scripts/
-│   ├── 00_setup.R                  install dependencies; smoke test
-│   ├── 01_build_nhanes.R           build nhanes_mercury.csv from CrossScreening
-│   ├── 02_phase1_empirical.R       Tables 4-5: Di Tella, Galiani, Burde, Banerjee
-│   ├── 03_phase2_empirical.R       Tables 4-5: Papke, NHANES, Card, MovieLens
-│   ├── 04_synthetic_table1.R       Table 1: MCUB identified sets (synthetic)
-│   ├── 05_montecarlo_table6.R      Table 6: Monte Carlo coverage results
-│   ├── 06_structural_table7.R      Table 7: structural simulation (DIAL scenarios)
-│   ├── 07_power_curve_grid.R       Figure 2 (power curves): parallelised MC grid
-│   ├── 08_figures.R                Figures 1, 3, 4: architecture and empirical plots
-│   ├── cr_wrapper.R                unified CR test entry point (all scenarios)
-│   └── jp_dgp.R                    Jones-Pewsey data-generating process
-│
-├── foundation/                     upstream CR test code (see foundation/README.md)
-│   ├── Fin_sim3_clean.R
-│   └── Fin_Empirical5_clean.R
-│
-├── data/                           see data/README.md for access instructions
-│   ├── ditella2013/
-│   ├── galiani2011/
-│   ├── banerjee2007/
-│   ├── burde2013/
-│   ├── papke1995/                  loaded via wooldridge::k401k
-│   ├── card1995/                   loaded via wooldridge::card
-│   ├── nhanes/                     loaded via CrossScreening::nhanes.fish
-│   └── movielens100k/              download instructions only; not re-hosted
-│
-├── paper/
-│   └── figures/                    compiled PNG figures for the paper
-│
-├── results/                        gitignored; recreated by scripts
-│
-└── docs/
-    ├── REPRODUCIBILITY.md          step-by-step run order with timing
-    ├── PARAMETERS.md               all hardcoded constants and their provenance
-    └── TROUBLESHOOTING.md          common errors and fixes
+├── scripts/      numbered scripts 00-10; 08 writes the figures to scripts/paper/figures/
+├── foundation/   shared code: CR test and MCUB sets, bootstrap rule, Jones-Pewsey DGP
+├── data/         the four .dta files of the Phase 1 applications
+├── results/      CSV outputs; caches are created here and ignored by git
+└── docs/         run order, parameters and troubleshooting
 ```
 
----
+## Data
 
-## Script-to-output map
+- Di Tella and Schargrodsky (2013), Galiani, Rossi and Schargrodsky
+  (2011), Banerjee and Iyer (2005) and Burde and Linden (2013): the `.dta`
+  files in `data/`. See [data/README.md](data/README.md) for sources and
+  terms.
+- Papke (1995) and Card (1995): the `wooldridge` R package.
+- NHANES: the `CrossScreening` R package. `01_nhanes_build.R` builds the
+  analytic frame.
+- MovieLens 100K: not included, under the GroupLens terms of use. Script
+  03 downloads `u.data` and `u.item` from GroupLens at run time. To work
+  offline, unzip `ml-100k.zip` into `scripts/ml-100k/` and call
+  `run_all_phase2_applications(ml_dir = "ml-100k")`; script 09 uses that
+  folder automatically when it exists.
 
-| Script | Output |
-|--------|--------|
-| `01_build_nhanes.R` | `nhanes_mercury.csv` |
-| `02_phase1_empirical.R` | `results/phase1_results.csv`, Tables 4-5 rows 1-4 |
-| `03_phase2_empirical.R` | Tables 4-5 rows 5-8 |
-| `04_synthetic_table1.R` | `results/table1_results.csv`, Table 1 |
-| `05_montecarlo_table6.R` | `results/table6_results.csv`, Table 6 |
-| `06_structural_table7.R` | Table 7, `paper/figures/sim_dial_scenarios.png` |
-| `07_power_curve_grid.R` | `results/cp_grid/`, Figure 2 power curves |
-| `08_figures.R` | `paper/figures/fig0_dial_architecture.png`, `fig1_diagnostic_space.png`, `fig3_domain_sensitivity.png` |
+## Reproducibility notes
 
----
+- Every script fixes its seeds.
+- The MCUB critical values come from simulation, so set endpoints can
+  differ in the third decimal between computers, and the bootstrap share
+  can differ by a few resamples.
+- Bootstrap and Monte Carlo results are cached in `results/` (`boot_rule/`,
+  `table6_grid_lean/`, `cp_grid_lean/`, `rule_mc/`). A rerun reuses them.
+  Delete a folder to recompute it.
 
-## Runtime estimates (7-core machine)
+## Licence
 
-| Script | Approximate wall time |
-|--------|-----------------------|
-| `00_setup.R` | 5-10 minutes (first run; package installs) |
-| `02_phase1_empirical.R` | 20-40 minutes |
-| `03_phase2_empirical.R` | 20-40 minutes |
-| `04_synthetic_table1.R` | 5 minutes |
-| `05_montecarlo_table6.R` | 4-8 hours |
-| `06_structural_table7.R` | 3 minutes per row |
-| `07_power_curve_grid.R` | 75 minutes (parallelised) |
-| `08_figures.R` | 2 minutes |
-
----
-
-## Software requirements
-
-- R >= 4.2.0
-- CRAN packages: see `scripts/00_setup.R` for the full list
-- GitHub package: `ivcrtest` (installed automatically by `00_setup.R`)
-- Package versions are recorded in `renv.lock`
-
----
-
-## Data access
-
-All datasets are publicly available. Three are loaded directly via R packages
-(`wooldridge`, `CrossScreening`). The remainder are downloaded from the
-original supplement mirrors listed in `data/README.md`. MovieLens 100K is downloaded at runtime from the GroupLens server
-and should not be re-hosted.
-
----
-
-## Note on code provenance
-
-The `foundation/` directory contains the upstream CR test and MCUB
-inference implementation that the DIAL pipeline depends on. This code
-originates from a third-party R package cited in the paper (reference 13).
-Full attribution will be provided in the camera-ready version. This
-dependency is the reason the submission cannot be made fully anonymous.
-
-## Anonymisation note
-
-This repository is submitted anonymously for peer review.
-Author information and the permanent repository URL will be
-added in the camera-ready version.
+The code is released under the MIT licence (see [LICENSE](LICENSE)). The
+files in `data/` belong to their original authors and publishers and are
+not covered by that licence; see [data/README.md](data/README.md).

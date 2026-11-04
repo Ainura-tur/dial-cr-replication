@@ -1,52 +1,64 @@
 # =============================================================================
 # 00_setup.R
 #
-# Run this script once before any other script in the repository.
-# It installs all required R packages, sets DIAL_SKIP_AUTORUN to prevent
-# long-running auto-runs when foundation files are sourced, and runs a
-# smoke test confirming the foundation loads without errors.
+# Run this script once before the other scripts. It installs the required
+# R packages, checks that the foundation files and the bundled data are in
+# place, and sources the two main foundation files as a smoke test.
 #
-# Usage:
+# Usage (from the repository root or from scripts/):
 #   Rscript scripts/00_setup.R
 #
 # Expected output on success:
 #   [OK] All packages installed.
 #   [OK] foundation/Fin_sim3_clean.R loaded.
 #   [OK] foundation/Fin_Empirical5_clean.R loaded.
-#   [OK] Setup complete. Proceed to scripts/02_phase1_empirical.R.
+#   [OK] foundation/jp_dgp.R found.
+#   [OK] foundation/bootstrap_rule.R found.
+#   [OK] All four data files found.
+#   [OK] All required functions available.
+#   [OK] Setup complete.
 # =============================================================================
 
 cat("=== DIAL replication setup ===\n\n")
+
+# ---- 0. Repo-root detection (works under Rscript and interactively) ----------
+
+.script_dir <- tryCatch(
+  dirname(normalizePath(sys.frame(1)$ofile)),
+  error = function(e) {
+    args <- commandArgs(trailingOnly = FALSE)
+    f    <- sub("--file=", "", args[grep("--file=", args)])
+    if (length(f) && nchar(f)) dirname(normalizePath(f))
+    else getwd()
+  }
+)
+.repo_root <- normalizePath(file.path(.script_dir, ".."))
+FOUNDATION_DIR <- file.path(.repo_root, "foundation")
+if (!dir.exists(FOUNDATION_DIR))
+  stop("foundation/ not found under ", .repo_root,
+       ". Run this script as Rscript scripts/00_setup.R from the repository.")
 
 # ---- 1. CRAN packages -------------------------------------------------------
 
 cran_pkgs <- c(
   # Core statistics and econometrics
-  "MASS", "ivreg", "lmtest", "sandwich", "nlme",
-  # Data manipulation
-  "dplyr", "tidyr", "haven", "zoo",
+  "MASS", "ivreg", "lmtest", "sandwich", "nlme", "numDeriv", "Matrix",
+  # Data manipulation and input
+  "dplyr", "data.table", "haven", "zoo",
   # Distributions and simulation
   "fGarch", "e1071",
   # Double machine learning
   "DoubleML", "mlr3", "mlr3learners", "ranger",
-  # Bootstrap and parallel
-  "future.apply",
-  # Independence testing
+  # Parallel computation
+  "future", "future.apply",
+  # HSIC independence test (synthetic benchmark baseline)
   "dHSIC",
   # Tables and output
   "stargazer", "knitr",
   # Graphics
-  "ggplot2", "ggrepel", "gridExtra", "grid",
-  # Wooldridge datasets (Papke 1995, Card 1995)
-  "wooldridge",
-  # NHANES data
-  "CrossScreening",
-  # Numerical differentiation (used in delta method)
-  "numDeriv",
-  # Matrix utilities
-  "Matrix",
-  # Remote package installation
-  "remotes"
+  "ggplot2", "ggrepel", "patchwork", "gridExtra",
+  # Data packages: Papke (1995) and Card (1995); NHANES extract
+  "wooldridge", "CrossScreening"
 )
 
 install_if_missing <- function(pkgs) {
@@ -60,44 +72,71 @@ install_if_missing <- function(pkgs) {
 }
 
 install_if_missing(cran_pkgs)
+.still_missing <- cran_pkgs[!(cran_pkgs %in% installed.packages()[, "Package"])]
+if (length(.still_missing))
+  stop("[FAIL] Could not install: ", paste(.still_missing, collapse = ", "))
 cat("[OK] All packages installed.\n\n")
 
-# ---- 2. ivcrtest (GitHub) ---------------------------------------------------
-# ivcrtest is a third-party R package implementing the CR test and MCUB
-# inference (Dzhumashev & Tursunalieva 2026). The GitHub account ratbekd
-# belongs to the package author, not to any author of this paper.
-if (!requireNamespace("ivcrtest", quietly = TRUE)) {
-  cat("Installing ivcrtest from GitHub...\n")
-  remotes::install_git("https://github.com/ratbekd/ivcrtest.git")
-} else {
-  cat("ivcrtest already installed.\n")
-}
+# Namespace protection (avoid MASS/stats masking dplyr verbs)
+select    <- dplyr::select;    filter    <- dplyr::filter
+mutate    <- dplyr::mutate;    slice     <- dplyr::slice
+recode    <- dplyr::recode;    rename    <- dplyr::rename
+summarise <- dplyr::summarise; summarize <- dplyr::summarize
+arrange   <- dplyr::arrange;   count     <- dplyr::count
+lag       <- dplyr::lag
 
-# ---- 3. DIAL_SKIP_AUTORUN sentinel ------------------------------------------
-# All downstream scripts must set this before sourcing the foundation files.
-# Setting it here confirms the pattern works and documents the requirement.
+# ---- 2. DIAL_SKIP_AUTORUN sentinel ------------------------------------------
+# Set this before sourcing the foundation files. Without it, their auto-run
+# blocks start long simulations. Every numbered script sets it.
 
 DIAL_SKIP_AUTORUN <- TRUE
 
-# ---- 4. Smoke test: source foundation files ---------------------------------
+# ---- 3. Smoke test: source the two main foundation files --------------------
 
-cat("\nSmoke test: sourcing foundation files...\n")
+cat("Smoke test: sourcing foundation files...\n")
 
-tryCatch({
-  source("foundation/Fin_sim3_clean.R")
-  cat("[OK] foundation/Fin_sim3_clean.R loaded.\n")
-}, error = function(e) {
-  stop("[FAIL] foundation/Fin_sim3_clean.R failed to load:\n  ", conditionMessage(e))
-})
+for (.f in c("Fin_sim3_clean.R", "Fin_Empirical5_clean.R")) {
+  .path <- file.path(FOUNDATION_DIR, .f)
+  tryCatch({
+    invisible(capture.output(source(.path)))
+    cat(sprintf("[OK] foundation/%s loaded.\n", .f))
+  }, error = function(e) {
+    stop(sprintf("[FAIL] foundation/%s failed to load:\n  %s",
+                 .f, conditionMessage(e)))
+  })
+}
+rm(.f, .path)
 
-tryCatch({
-  source("foundation/Fin_Empirical5_clean.R")
-  cat("[OK] foundation/Fin_Empirical5_clean.R loaded.\n")
-}, error = function(e) {
-  stop("[FAIL] foundation/Fin_Empirical5_clean.R failed to load:\n  ", conditionMessage(e))
-})
+# ---- 4. The other foundation files ------------------------------------------
+# jp_dgp.R: the Jones-Pewsey DGP, used by 04, 05 and 10.
+# bootstrap_rule.R: the bootstrap validity rule (tau_V), used by 02, 03,
+# 04, 05, 06, 09 and 10.
 
-# ---- 5. Verify key functions are available ----------------------------------
+for (.f in c("jp_dgp.R", "bootstrap_rule.R")) {
+  if (file.exists(file.path(FOUNDATION_DIR, .f))) {
+    cat(sprintf("[OK] foundation/%s found.\n", .f))
+  } else {
+    warning(sprintf("foundation/%s not found (file names are case-sensitive).", .f))
+  }
+}
+rm(.f)
+
+# ---- 5. Bundled data ----------------------------------------------------------
+# The Phase 1 applications read these files from data/ (see data/README.md).
+
+.data_files <- c("Di_Tella_Schargrodsky_2013.dta", "Crime.dta",
+                 "yld_sett_aug03.dta", "afgan.dta")
+.data_ok <- vapply(.data_files, function(f)
+  !inherits(try(dial_data_path(f), silent = TRUE), "try-error"), logical(1))
+if (all(.data_ok)) {
+  cat("[OK] All four data files found.\n")
+} else {
+  warning("Missing data files in data/: ",
+          paste(.data_files[!.data_ok], collapse = ", "))
+}
+rm(.data_files, .data_ok)
+
+# ---- 6. Verify key functions are available ----------------------------------
 
 required_fns <- c(
   "check_compatibility_simple",
@@ -106,6 +145,7 @@ required_fns <- c(
   "pvalue_mcub_zero_fast",
   "g_xu_safe",
   "estimate_cov_corr_boot",
+  "dial_data_path",
   "generate_data",
   "monte_carlo_simulation"
 )
@@ -118,9 +158,13 @@ if (length(missing_fns)) {
   cat("[OK] All required functions available.\n")
 }
 
-# ---- 6. Write sentinel file -------------------------------------------------
+# ---- 7. Write sentinel file -------------------------------------------------
 
-writeLines(as.character(Sys.time()), ".setup_complete")
-cat("\n[OK] Setup complete. Proceed to scripts/02_phase1_empirical.R.\n")
-cat("     Recommended run order: 01 -> 02 -> 03 -> 04 -> 05 -> 06 -> 07 -> 08\n")
+writeLines(as.character(Sys.time()), file.path(.repo_root, ".setup_complete"))
+cat("\n[OK] Setup complete.\n")
+cat("     Run order (see README.md; 02 and 03 run inside an R session):\n")
+cat("       01_nhanes_build.R -> 02_phase1_empirical.R -> 03_phase2_empirical.R\n")
+cat("       04_synthetic_benchmark.R -> 05_montecarlo_validation.R\n")
+cat("       06_structural_simulation.R -> 07_power_curve_grid.R -> 08_figures.R\n")
+cat("       09_implied_endogeneity.R -> 10_rule_montecarlo.R\n")
 cat("     See docs/REPRODUCIBILITY.md for details.\n\n")
