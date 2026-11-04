@@ -1,5 +1,5 @@
 "Z","r_xz","r_zu","beta_IV","plug_in","CI_Bei","CI_simple","Zero_in_CI","p_zero","n","cov_unit","p_hat_B","n_boot_ok","boot_unit","Valid_tau2","Instrument","n_sample","rxu_range","domain_label","F_first","beta_2sls","beta_DML","R","DIAL","DIAL_single","Study"
-"Z1",0.959,NA,-0.038,"[-0.284, 0.597]","[-0.400, 0.695]","[-0.435, 0.724]","✓",1,1682,"raw",1,500,"raw","Valid","num_genres",1682,"c(0.0, 0.8)","canonical",163.1,-0.0376,0.061,0.62,"A","A","MovieLens 100K"
+"Z1",0.959,NA,-0.038,"[-0.284, 0.597]","[-0.400, 0.695]","[-0.435, 0.724]","✓",1,1682,"raw",1,500,"raw","Valid","num_genres",1682,"c(0.0, 0.8)","canonical",163.1,-0.0376,0.061,0.62,"B (sign)","B (sign)","MovieLens 100K"
 "Z2",-0.161,NA,2.938,"[-0.987, -0.463]","[-1.042, -0.244]","[-1.000, -0.213]","×",0,1681,"raw",0.016,500,"raw","Invalid","release_year",1681,"c(-0.8, 0.0)","canonical",1.7,2.938,0.0616,47.68,"C (weak)","C (weak)","MovieLens 100K"
 "Z3",0.183,NA,-2.395,"[-1.000, -0.736]","[-1.072, -0.524]","[-1.000, -0.481]","×",0,1682,"raw",0,500,"raw","Invalid","is_sequel",1682,"c(-0.8, 0.0)","canonical",1.3,-2.3946,0.0618,38.74,"C (weak)","C (weak)","MovieLens 100K"
 "Z1",0.899,NA,15.382,"[0.439, 0.688]","[0.101, 0.964]","[0.051, 1.000]","×",0.006,1534,"raw",0.284,500,"raw","Invalid","sole_plan",1534,"c(0.0, 0.3)","canonical",NA,NA,NA,NA,NA,NA,"Papke 401(k)"
