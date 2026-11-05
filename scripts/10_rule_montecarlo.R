@@ -31,7 +31,7 @@
 #   results/rule_mc/    the per-cell results, saved after each replication
 #   An interrupted run resumes at the last finished replication.
 #
-# RUNTIME  about 2 hours per cell on 7 cores, so about 6 hours in all.
+# RUNTIME  about 8.5 hours in all on 7 cores (504 minutes for the three cells).
 #
 # OUTPUT
 #   results/rule_mc_results.csv and LaTeX rows for tab:rule_mc

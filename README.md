@@ -56,7 +56,7 @@ gives the details, including how to run 02 and 03 in an interactive session.
 | `07_power_curve_grid.R` | data for Figure 2 (`fig:power_curves`) | `results/cp_grid_summary_lean.csv` | about 160 minutes |
 | `08_figures.R` | Figures 1 to 4 | `scripts/paper/figures/fig1_*.png` to `fig4_*.png` | about a minute |
 | `09_implied_endogeneity.R` | Table 5 (`tab:locality`) | `results/implied_endogeneity.csv` | about 20 minutes |
-| `10_rule_montecarlo.R` | Table 8 (`tab:rule_mc`) | `results/rule_mc_results.csv` | about 6 hours |
+| `10_rule_montecarlo.R` | Table 8 (`tab:rule_mc`) | `results/rule_mc_results.csv` | about 8.5 hours |
 
 Table 3 is `tab:empirical_full` and Table 4 is `tab:domain_sens`. Table 2
 (`tab:denotation`) lists notation. Table 6 (`tab:frontier`) comes from a
