@@ -1,12 +1,12 @@
 # ==============================================================================
-# 10_rule_montecarlo.R  -  Monte Carlo of the bootstrap validity rule
-#                          (tab:rule_mc, app:mc)
+# 10_rule_montecarlo.R  -  Monte Carlo of the MCUB-share rule (app:mc;
+#                          tab:rule_mc names this script's own table)
 # ==============================================================================
 #
 # PURPOSE
-#   tab:mc (05_montecarlo_validation.R) and fig:power_curves (07) report
-#   how often a single MCUB set contains zero. DIAL's validity gate is the
-#   bootstrap rule p_hat_B >= tau_V. This script runs the rule itself on
+#   05_montecarlo_validation.R and 07_power_curve_grid.R report how often a
+#   single MCUB set contains zero. The MCUB-share rule is
+#   p_hat_B >= tau_V. This script runs the rule itself on
 #   simulated data: for each cell rho_ZU it draws R_REPS samples from the
 #   J-P DGP (n = 800), applies the rule with B_RULE resamples, and records
 #   p_hat_B and the verdict.

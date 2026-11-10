@@ -3,6 +3,11 @@
 # ------------------------------------------------------------------------------
 # Tables are referenced by LaTeX label, not by number.
 #
+# NOTE  The DIAL column of this script applies the MCUB-share rule of app:mc
+#       (called the bootstrap validity rule or the tau_V rule below). The
+#       gate columns of tab:synthetic come from 13_rstar_gate_mc.R (part C),
+#       which rebuilds these samples.
+#
 # Reproduces tab:synthetic under the Jones-Pewsey DGP with the per-row
 # correctly-elicited domain protocol (cor:domain, practical protocol):
 #

@@ -1,6 +1,13 @@
 #================================================================
 # 03_phase2_empirical.R  —  Phase 2 empirical analyses for DIAL
 #
+# NOTE  This script computes the MCUB sets of tab:empirical_full. Where its
+#       comments mention the bootstrap validity rule, the tau_V rule or
+#       Stage 2 of Algorithm 1, they mean the MCUB-share rule of app:mc; the
+#       paper's Algorithm 1 uses the validity gate of 12_rstar_gate.R. The
+#       paper does not include the domain-sensitivity results
+#       (tab:domain_sens).
+#
 # PURPOSE
 #   Provides run_*_analysis_fixed() functions for the four application
 #   families in tab:empirical_full and tab:domain_sens that are not

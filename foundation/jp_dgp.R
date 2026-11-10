@@ -1,10 +1,10 @@
 # ==============================================================================
-# jp_dgp.R  --  Shared Jones-Pewsey DGP (tab:synthetic, tab:mc, tab:rule_mc)
+# jp_dgp.R  --  Shared Jones-Pewsey DGP (tab:synthetic and the MCUB-share studies)
 # ------------------------------------------------------------------------------
 # Implements the synthetic DGP of the paper (Appendix D.1). Used by:
 #   - scripts/04_synthetic_benchmark.R   (tab:synthetic)
-#   - scripts/05_montecarlo_validation.R (tab:mc)
-#   - scripts/10_rule_montecarlo.R       (tab:rule_mc)
+#   - scripts/05_montecarlo_validation.R (study of the MCUB-share rule)
+#   - scripts/10_rule_montecarlo.R       (study of the MCUB-share rule)
 #
 # DGP summary
 # -----------

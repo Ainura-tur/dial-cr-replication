@@ -15,10 +15,10 @@ and follow the terms of their replication archives.
 
 | File | Rows x columns | MD5 | Source | Read by |
 |---|---|---|---|---|
-| `Di_Tella_Schargrodsky_2013.dta` | 24,362 x 42 | `8cc68e1264c2387cd362e604ba027bd9` | Di Tella and Schargrodsky (2013) | 02, 09 |
-| `Crime.dta` | 50,000 x 52 | `a5968b6bbc584c2c7a78c0569992e341` | Galiani, Rossi and Schargrodsky (2011) | 02, 09 |
-| `yld_sett_aug03.dta` | 8,672 x 204 | `c10134075c9be0ea2074b8ae55d7c76c` | Banerjee and Iyer (2005) | 02, 09 |
-| `afgan.dta` | 687 x 17 | `378bca1775ab2baf875d2994bdf56f10` | Burde and Linden (2013) | 02, 09 |
+| `Di_Tella_Schargrodsky_2013.dta` | 24,362 x 42 | `8cc68e1264c2387cd362e604ba027bd9` | Di Tella and Schargrodsky (2013) | 02, 09, 11, 12 |
+| `Crime.dta` | 50,000 x 52 | `a5968b6bbc584c2c7a78c0569992e341` | Galiani, Rossi and Schargrodsky (2011) | 02, 09, 11, 12 |
+| `yld_sett_aug03.dta` | 8,672 x 204 | `c10134075c9be0ea2074b8ae55d7c76c` | Banerjee and Iyer (2005) | 02, 09, 11, 12 |
+| `afgan.dta` | 687 x 17 | `378bca1775ab2baf875d2994bdf56f10` | Burde and Linden (2013) | 02, 09, 11, 12 |
 
 `Di_Tella_Schargrodsky_2013.dta` is the archive file
 `JPE - Di Tella and Schargrodsky - CriminalRecidivismAfterPrisonAndElectronicMonitoring .dta`

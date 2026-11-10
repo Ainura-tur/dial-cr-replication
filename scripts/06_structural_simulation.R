@@ -2,8 +2,14 @@
 # 06_structural_simulation.R  -  Structural simulation for tab:sim
 # ==============================================================================
 #
+# NOTE  The DIAL column of this script applies the MCUB-share rule of app:mc
+#       (called the bootstrap validity rule below). The gate columns of
+#       tab:sim (r*, CS_n, V) come from 13_rstar_gate_mc.R (part D), which
+#       rebuilds these samples. app:mc quotes this script's strict shares
+#       for rows A and het. rev., C hidden (0.896 and 0.848).
+#
 # PURPOSE
-#   Reproduces the five rows of tab:sim with the DGP of app:dgp. The rows
+#   Reproduces the seven rows of tab:sim with the DGP of app:dgp. The rows
 #   cover every DIAL outcome, and two of them reach Scenario B by
 #   different routes:
 #     A          valid instrument, homogeneous effect, confounder observed
@@ -13,6 +19,14 @@
 #                confounder C, so DML is biased
 #     C          exclusion violation (gamma = 0.30)
 #     C (weak)   weak instrument (first-stage F about 7)
+#   Two further rows show that heterogeneity can also move the validity
+#   verdict (prop:implied(c)):
+#     het. rev.            valid instrument; the HIGH-effect type complies
+#                          more, so LATE > theta_DML, r* < 0, and the
+#                          instrument fails under D = (0, 0.8)
+#     het. rev., C hidden  the same sample, C unobserved: the confounding
+#                          offsets the heterogeneity, r* is close to 0, and
+#                          the instrument passes
 #
 # DESIGN NOTES
 #   - Every row has its own IV and DML estimates.
@@ -43,13 +57,19 @@
 #       pi_H = 0.05, pi_L = 0.60. IV targets
 #       LATE = E[beta pi] / E[pi] = 0.108. DML (partially linear model)
 #       targets E[beta w] / E[w] with w = pi^2 + 0.6^2, which is 0.301.
-#   Controls seen by the analyst: (H, C) in every row except B (conf.),
-#   where only H is seen. Then DML targets
-#   0.425 + Cov(V, U) / Var(D | H) = 0.425 + 0.16 / 0.5825 = 0.700.
+#   Rows het. rev.: beta_H = 0.80, beta_L = 0.05, pi_H = 0.60, pi_L = 0.05.
+#     IV targets LATE = 0.742; DML targets 0.549 with C observed and 0.749
+#     with C hidden.
+#   Controls seen by the analyst: (H, C) in every row except B (conf.) and
+#   het. rev., C hidden, where only H is seen. Then DML targets
+#   E[beta w] / E[w] + Cov(V, U) / E[w] with w = pi^2 + 0.4^2 + 0.6^2; for
+#   row B (conf.), 0.425 + 0.16 / 0.5825 = 0.700.
 #
 # CR TEST
 #   Domain D = (0, 0.8); alpha = 0.10; ZERO_TOL = 0.05 (footnote fn:tol).
-#   The CR test residualises on the same controls as DML.
+#   The CR test residualises on the same controls as DML. Each row also
+#   reports the share under strict containment (zero_tol = 0), computed from
+#   the same cached resamples.
 #
 # BOOTSTRAP VALIDITY RULE (prop:finite_sample)
 #   foundation/bootstrap_rule.R wraps check_compatibility_simple(): B = 500
@@ -57,6 +77,15 @@
 #   passes when p_hat_B >= TAU_V = 0.95 (column Valid_tau2, computed from
 #   the unrounded share). Results are cached in results/boot_rule/, so a
 #   rerun with the same data and seeds reuses them.
+#
+# ROW SELECTION
+#   Set the environment variable DIAL_SIM_ROWS to a comma-separated list of
+#   row ids (A, Bhet, Bconf, C, Cweak, Rev, RevHid) to run only those rows,
+#   e.g. DIAL_SIM_ROWS=A,Rev,RevHid Rscript 06_structural_simulation.R
+#
+# DML
+#   DoubleML when it is installed; otherwise foundation/dml_fallback.R, the
+#   same estimator without mlr3 (the script prints which one it used).
 #
 # OUTPUT
 #   - console table and LaTeX rows for tab:sim
@@ -76,14 +105,15 @@ gc()
 
 install_if_missing <- function(pkgs) {
   new <- pkgs[!(pkgs %in% installed.packages()[, "Package"])]
-  if (length(new)) install.packages(new, repos = "https://cloud.r-project.org/")
+  if (length(new)) try(install.packages(new, repos = "https://cloud.r-project.org/"))
 }
 install_if_missing(c("dplyr", "MASS", "DoubleML", "mlr3", "mlr3learners",
                      "ranger", "data.table", "future.apply"))
 
 suppressPackageStartupMessages({
-  library(dplyr); library(MASS); library(DoubleML); library(mlr3)
-  library(mlr3learners); library(ranger); library(data.table)
+  library(dplyr); library(MASS); library(ranger); library(data.table)
+  for (.p in c("DoubleML", "mlr3", "mlr3learners"))
+    if (requireNamespace(.p, quietly = TRUE)) library(.p, character.only = TRUE)
 })
 
 # Namespace protection (avoid MASS/stats masking dplyr verbs)
@@ -200,9 +230,11 @@ row_targets <- function(beta_h, beta_l, pi_h, pi_l, observe_C) {
   if (observe_C) {
     w   <- p^2 + SIGMA_EPS^2                   # Var(D | H, C, type)
     dml <- sum(b * w) / sum(w)
-  } else {                                     # homogeneous rows only
-    vdh <- mean(p^2) + CONF_LOADING^2 + SIGMA_EPS^2
-    dml <- mean(b) + CONF_LOADING^2 / vdh
+  } else {
+    # Var(D | H, type) weights the effects; the hidden C adds
+    # Cov(V, U) / E[Var(D | H)] (equal type shares)
+    w   <- p^2 + CONF_LOADING^2 + SIGMA_EPS^2
+    dml <- sum(b * w) / sum(w) + CONF_LOADING^2 / mean(w)
   }
   c(LATE = late, ATE = mean(b), DML = dml)
 }
@@ -221,7 +253,16 @@ implied_rdu <- function(rho) {
 }
 
 # DML: partially linear model, random forests, 5-fold cross-fitting.
-# (Defined only if absent, so a test harness can supply its own.)
+# (Defined only if absent, so a test harness can supply its own.) Without
+# DoubleML, foundation/dml_fallback.R supplies the same estimator.
+source(file.path(FOUNDATION_DIR, "dml_fallback.R"))
+DML_ENGINE <- dial_dml_engine_report()     # stops if DIAL_REQUIRE_DOUBLEML=1
+                                           # and DoubleML does not load
+if (!exists("dml_plr", mode = "function") && DML_ENGINE != "DoubleML") {
+  dml_plr <- function(df, Y, D, controls, num.trees = 300L, n_folds = 5L)
+    dial_dml_plr_rf(df, Y, D, controls, n_rep = 1L, n_folds = n_folds,
+                    num.trees = num.trees)$coef
+}
 if (!exists("dml_plr", mode = "function")) {
   dml_plr <- function(df, Y, D, controls, num.trees = 300L, n_folds = 5L) {
     if (requireNamespace("lgr", quietly = TRUE))
@@ -269,7 +310,7 @@ run_dial <- function(df, label, seed, controls, targets) {
   u_hat  <- y_r - beta_iv * x_r
 
   ident_set <- NA_character_; p_hat_B <- NA_real_; n_boot_ok <- NA_integer_
-  valid_tau2 <- NA_character_
+  valid_tau2 <- NA_character_; p_hat_strict <- NA_real_
   tryCatch({
     cr <- check_compatibility_simple(df_cr, i = as.integer(seed), alpha = ALPHA,
                                      rxu_range = RXU)
@@ -278,6 +319,11 @@ run_dial <- function(df, label, seed, controls, targets) {
       if (!is.null(cr$p_hat_B))    p_hat_B    <- as.numeric(cr$p_hat_B[1])
       if (!is.null(cr$Valid_tau2)) valid_tau2 <- as.character(cr$Valid_tau2[1])
       if (!is.null(cr$n_boot_ok))  n_boot_ok  <- as.integer(cr$n_boot_ok[1])
+      # Strict containment from the same (cached) resamples
+      br0 <- mcub_bootstrap_rule(df_cr, rxu_range = RXU, alpha = ALPHA,
+                                 seed = 5000L + as.integer(seed),
+                                 zero_tol = 0, verbose = FALSE)
+      p_hat_strict <- br0$p_hat
     }
   }, error = function(e) cat(sprintf("    CR ERROR: %s\n", conditionMessage(e))))
 
@@ -301,22 +347,25 @@ run_dial <- function(df, label, seed, controls, targets) {
   }
   dial        <- classify(valid)
   dial_single <- classify(zero_in_tol)
+  dial_strict <- classify(!is.na(p_hat_strict) && p_hat_strict >= TAU_V)
 
   cat(sprintf(
     "  %-26s n=%5d DML=%6.3f IV=%6.3f R=%5.2f F=%7.0f %17s p_hat_B=%5.3f (%s ok) r*=%+.3f -> %s (single %s)\n",
     label, n, beta_dml, beta_iv, ratio, first_F, ident_set, p_hat_B,
     as.character(n_boot_ok), r_star, dial, dial_single))
   cat(sprintf(
-    "  %-26s targets: LATE=%.3f ATE=%.3f DML=%.3f | OLS-IV=%+.4f, r*sd(u)/sd(x)=%+.4f\n",
+    "  %-26s targets: LATE=%.3f ATE=%.3f DML=%.3f | OLS-IV=%+.4f, r*sd(u)/sd(x)=%+.4f | strict p_hat_B=%.3f -> %s\n",
     "", targets["LATE"], targets["ATE"], targets["DML"],
-    beta_ols - beta_iv, r_star * stats::sd(u_hat) / stats::sd(x_r)))
+    beta_ols - beta_iv, r_star * stats::sd(u_hat) / stats::sd(x_r),
+    p_hat_strict, dial_strict))
 
   list(label = label, n = n, controls = controls,
        beta_dml = beta_dml, beta_iv = beta_iv, beta_ols = beta_ols,
        ratio = ratio, first_F = first_F, ident_set = ident_set,
        ci_lo = ci_lo, ci_hi = ci_hi, p_hat_B = p_hat_B, n_boot_ok = n_boot_ok,
-       r_star = r_star, dial = dial, dial_single = dial_single,
-       targets = targets)
+       p_hat_strict = p_hat_strict, r_star = r_star, dial = dial,
+       dial_single = dial_single, dial_strict = dial_strict,
+       dml_engine = DML_ENGINE, targets = targets)
 }
 
 # ==============================================================================
@@ -328,6 +377,7 @@ beta_hom      <- 0.425                 # = ATE of the two-type design
 beta_high     <- 0.80;  beta_low <- 0.05
 pi_hom        <- 0.25
 pi_high       <- 0.05;  pi_low   <- 0.60   # low-effect type complies more
+# reversed rows: the high-effect type complies more (pi_low_rev = pi_high)
 gamma_invalid <- 0.30
 pi_weak       <- sqrt(5 * (CONF_LOADING^2 + SIGMA_EPS^2) / n)   # F about 7
 
@@ -344,6 +394,7 @@ df_het   <- generate_data(n, beta_high, beta_low, pi_high, pi_low, 0, seed = 102
 df_inv   <- generate_data(n, beta_hom, beta_hom, pi_hom, pi_hom,
                           gamma_invalid, seed = 201L)
 df_weak  <- generate_data(n, beta_hom, beta_hom, pi_weak, pi_weak, 0, seed = 401L)
+df_rev   <- generate_data(n, beta_high, beta_low, pi_low, pi_high, 0, seed = 103L)
 
 # ==============================================================================
 # tab:sim ROWS
@@ -353,18 +404,28 @@ cat("===========================================================================
 cat("tab:sim: structural simulation -- every DIAL outcome from one DGP\n")
 cat("================================================================================\n\n")
 
-res <- list(
-  run_dial(df_hom,  "A: homogeneous",          111L, H_AND_C,
-           row_targets(beta_hom, beta_hom, pi_hom, pi_hom, TRUE)),
-  run_dial(df_het,  "B: heterogeneous effects", 112L, H_AND_C,
-           row_targets(beta_high, beta_low, pi_high, pi_low, TRUE)),
-  run_dial(df_hom,  "B: C unobserved",          113L, H_ONLY,
-           row_targets(beta_hom, beta_hom, pi_hom, pi_hom, FALSE)),
-  run_dial(df_inv,  "C: exclusion violation",   211L, H_AND_C,
-           row_targets(beta_hom, beta_hom, pi_hom, pi_hom, TRUE)),
-  run_dial(df_weak, "C: weak instrument",       411L, H_AND_C,
-           row_targets(beta_hom, beta_hom, pi_weak, pi_weak, TRUE))
+ROWS <- list(
+  A      = function() run_dial(df_hom,  "A: homogeneous",          111L, H_AND_C,
+             row_targets(beta_hom, beta_hom, pi_hom, pi_hom, TRUE)),
+  Bhet   = function() run_dial(df_het,  "B: heterogeneous effects", 112L, H_AND_C,
+             row_targets(beta_high, beta_low, pi_high, pi_low, TRUE)),
+  Bconf  = function() run_dial(df_hom,  "B: C unobserved",          113L, H_ONLY,
+             row_targets(beta_hom, beta_hom, pi_hom, pi_hom, FALSE)),
+  C      = function() run_dial(df_inv,  "C: exclusion violation",   211L, H_AND_C,
+             row_targets(beta_hom, beta_hom, pi_hom, pi_hom, TRUE)),
+  Cweak  = function() run_dial(df_weak, "C: weak instrument",       411L, H_AND_C,
+             row_targets(beta_hom, beta_hom, pi_weak, pi_weak, TRUE)),
+  Rev    = function() run_dial(df_rev,  "het. rev.",                114L, H_AND_C,
+             row_targets(beta_high, beta_low, pi_low, pi_high, TRUE)),
+  RevHid = function() run_dial(df_rev,  "het. rev., C hidden",      115L, H_ONLY,
+             row_targets(beta_high, beta_low, pi_low, pi_high, FALSE))
 )
+.sel <- Sys.getenv("DIAL_SIM_ROWS", "")
+.sel <- if (nzchar(.sel)) trimws(strsplit(.sel, ",")[[1]]) else names(ROWS)
+if (length(setdiff(.sel, names(ROWS))))
+  stop("Unknown rows in DIAL_SIM_ROWS: ", paste(setdiff(.sel, names(ROWS)), collapse = ", "))
+res <- lapply(.sel, function(k) ROWS[[k]]())
+names(res) <- .sel
 
 # ==============================================================================
 # SUMMARY AND LaTeX ROWS
@@ -373,13 +434,14 @@ res <- list(
 cat("\n================================================================================\n")
 cat("MASTER SUMMARY (tab:sim)\n")
 cat("================================================================================\n\n")
-cat(sprintf("%-26s %7s %7s %6s %8s %17s %7s %7s %12s\n",
-            "Analysis", "DML", "IV", "R", "F", "Ident.set", "p_hat_B", "r*", "DIAL"))
-cat(strrep("-", 104), "\n")
+cat(sprintf("%-26s %7s %7s %6s %8s %17s %7s %7s %12s %7s %12s\n",
+            "Analysis", "DML", "IV", "R", "F", "Ident.set", "p_hat_B", "r*", "DIAL",
+            "strict", "DIAL strict"))
+cat(strrep("-", 126), "\n")
 for (r in res)
-  cat(sprintf("%-26s %7.3f %7.3f %6.2f %8.0f %17s %7.3f %+7.3f %12s\n",
+  cat(sprintf("%-26s %7.3f %7.3f %6.2f %8.0f %17s %7.3f %+7.3f %12s %7.3f %12s\n",
               r$label, r$beta_dml, r$beta_iv, r$ratio, r$first_F,
-              r$ident_set, r$p_hat_B, r$r_star, r$dial))
+              r$ident_set, r$p_hat_B, r$r_star, r$dial, r$p_hat_strict, r$dial_strict))
 
 fmt_end <- function(v) sprintf("%+.3f", max(-1, min(1, v)))
 cat("\nLaTeX rows for tab:sim (endpoints clipped to [-1, 1]):\n\n")
@@ -389,6 +451,10 @@ for (r in res)
               formatC(round(r$first_F), format = "d", big.mark = "{,}"),
               fmt_end(r$ci_lo), fmt_end(r$ci_hi), r$p_hat_B, r$r_star, r$dial))
 
-saveRDS(res, file.path(RESULTS_DIR, "sim_dial_v7_results.rds"))
+# Rows run in earlier calls (other DIAL_SIM_ROWS selections) are kept.
+.rds <- file.path(RESULTS_DIR, "sim_dial_v7_results.rds")
+.old <- if (file.exists(.rds)) tryCatch(readRDS(.rds), error = function(e) NULL) else NULL
+if (!is.null(.old) && !is.null(names(.old))) { .old[names(res)] <- res; res <- .old }
+saveRDS(res, .rds)
 cat(sprintf("\nCoef seed = %d (phi, lambda in results/coef_vectors.rds)\n", COEF_SEED))
 cat("\nDONE.\n")

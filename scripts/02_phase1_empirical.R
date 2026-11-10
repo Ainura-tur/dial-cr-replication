@@ -3,6 +3,13 @@
 #                           tab:domain_sens
 # ==============================================================================
 #
+# NOTE  This script computes the MCUB sets of tab:empirical_full. Where its
+#       comments mention the bootstrap validity rule, the tau_V rule or
+#       Stage 2 of Algorithm 1, they mean the MCUB-share rule of app:mc; the
+#       paper's Algorithm 1 uses the validity gate of 12_rstar_gate.R. The
+#       paper does not include the domain-sensitivity results
+#       (tab:domain_sens).
+#
 # PURPOSE
 #   Calls the four "phase 1" empirical pipeline functions in
 #   Fin_Empirical5_clean.R with the within-sign canonical domains, plus

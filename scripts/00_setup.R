@@ -14,6 +14,8 @@
 #   [OK] foundation/Fin_Empirical5_clean.R loaded.
 #   [OK] foundation/jp_dgp.R found.
 #   [OK] foundation/bootstrap_rule.R found.
+#   [OK] foundation/rstar_gate.R found.
+#   [OK] foundation/dml_fallback.R found.
 #   [OK] All four data files found.
 #   [OK] All required functions available.
 #   [OK] Setup complete.
@@ -108,11 +110,14 @@ for (.f in c("Fin_sim3_clean.R", "Fin_Empirical5_clean.R")) {
 rm(.f, .path)
 
 # ---- 4. The other foundation files ------------------------------------------
-# jp_dgp.R: the Jones-Pewsey DGP, used by 04, 05 and 10.
-# bootstrap_rule.R: the bootstrap validity rule (tau_V), used by 02, 03,
-# 04, 05, 06, 09 and 10.
+# jp_dgp.R: the Jones-Pewsey DGP, used by 04, 05, 10 and 13.
+# bootstrap_rule.R: the MCUB-share rule (tau_V) and the preparation step,
+#   used by 02 to 06 and 09 to 13.
+# rstar_gate.R: the validity gate of Algorithm 1, used by 12 and 13.
+# dml_fallback.R: DoubleML's estimator for machines without DoubleML,
+#   used by 06, 09 and 11.
 
-for (.f in c("jp_dgp.R", "bootstrap_rule.R")) {
+for (.f in c("jp_dgp.R", "bootstrap_rule.R", "rstar_gate.R", "dml_fallback.R")) {
   if (file.exists(file.path(FOUNDATION_DIR, .f))) {
     cat(sprintf("[OK] foundation/%s found.\n", .f))
   } else {
@@ -162,9 +167,7 @@ if (length(missing_fns)) {
 
 writeLines(as.character(Sys.time()), file.path(.repo_root, ".setup_complete"))
 cat("\n[OK] Setup complete.\n")
-cat("     Run order (see README.md; 02 and 03 run inside an R session):\n")
-cat("       01_nhanes_build.R -> 02_phase1_empirical.R -> 03_phase2_empirical.R\n")
-cat("       04_synthetic_benchmark.R -> 05_montecarlo_validation.R\n")
-cat("       06_structural_simulation.R -> 07_power_curve_grid.R -> 08_figures.R\n")
-cat("       09_implied_endogeneity.R -> 10_rule_montecarlo.R\n")
-cat("     See docs/REPRODUCIBILITY.md for details.\n\n")
+cat("     Next, from the scripts folder:\n")
+cat("       Rscript run_all.R paper   every script behind the paper (about 6-7 hours)\n")
+cat("       Rscript run_all.R dry     check the setup and list the steps only\n")
+cat("     See README.md and docs/REPRODUCIBILITY.md for details.\n\n")

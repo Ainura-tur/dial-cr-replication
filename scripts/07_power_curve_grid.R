@@ -1,8 +1,9 @@
 # =============================================================================
 # 07_power_curve_grid.R
 #
-# Lean power-curve Monte Carlo for fig:power_curves (the classifiability
-# frontier).
+# Lean power-curve Monte Carlo of single MCUB sets, a study of the
+# MCUB-share rule that the paper mentions in app:mc. fig:power_curves plots
+# the power of the validity gate instead, from 13_rstar_gate_mc.R (part B).
 #
 # Per-rep cost is dominated by a single CIhybrid call. Relative to the full
 # version, three expensive operations are removed:

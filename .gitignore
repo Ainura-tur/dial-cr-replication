@@ -17,6 +17,9 @@ results/table6_grid_lean/
 results/cp_grid_lean/
 results/rule_mc/
 
+# Logs of run_all.R: they record local paths, so they stay out of the repository
+results/logs/
+
 # Derived or downloaded inputs that the scripts rebuild
 scripts/nhanes_mercury.csv
 scripts/ml-100k/

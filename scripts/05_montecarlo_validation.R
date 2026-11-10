@@ -1,8 +1,12 @@
 # ==============================================================================
-# 05_montecarlo_validation.R   --   tab:mc (Monte Carlo validation of
-#                                   prop:finite_sample)
+# 05_montecarlo_validation.R   --   Monte Carlo study of single MCUB sets
+#                                   and the MCUB-share rule (app:mc)
 # ------------------------------------------------------------------------------
 # Tables are referenced by LaTeX label, not by number.
+#
+# NOTE  The paper mentions this study in app:mc but does not tabulate it;
+#       tab:mc below names this script's own table, and prop:finite_sample
+#       and "bootstrap validity rule" refer to the MCUB-share rule.
 #
 # PURPOSE
 #   For each of the 11 instruments of JP_INSTRUMENT_GRID (target cor(z, u)

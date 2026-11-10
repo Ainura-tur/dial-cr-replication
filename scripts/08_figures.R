@@ -4,41 +4,21 @@
 # Produces all paper figures and saves them to paper/figures inside the
 # scripts folder (the folder that holds this script):
 #   fig:architecture     DIAL architecture diagram -> fig1_dial_architecture.png
-#   fig:power_curves     Power curves (3 panels)   -> fig2_combined.png
-#   fig:domain_sens      Domain sensitivity        -> fig3_domain_sensitivity.png
+#   fig:power_curves     Power of the gate         -> fig2_gate_power.png
+#   fig:rstar            r* against the domain     -> fig3_rstar_domain.png
 #   fig:diagnostic_space DIAL diagnostic space     -> fig4_diagnostic_space.png
 #
 # Figures are named by LaTeX label, not by number, so a float move in the
 # paper cannot make these comments stale.
 #
-# fig:power_curves requires results/cp_grid_summary_lean.csv produced by
-# scripts/07_power_curve_grid.R; the script looks for it in results/ inside
-# or beside the scripts folder (see Paths below). All other figures are
-# self-contained.
-# The script prints the 50% crossings delta*_n that Section 4.3 and the
-# fig:power_curves caption quote.
-#
-# NOTE ON THE DOMAIN-SENSITIVITY AND DIAGNOSTIC-SPACE DATA
-#   Both figures use hand-coded data frames. Every value must match the
-#   empirical tables (tab:empirical_full, tab:domain_sens):
-#
-#     fig3 rows  -> canonical and within-sign wide MCUB sets.
-#                   Phase 1 rows come from 02_phase1_empirical.R
-#                   (domain_label "canonical" / "wide_canonical");
-#                   Phase 2 rows (Card, Papke) from 03_phase2_empirical.R.
-#                   Only instruments with a robustness pair appear.
-#                   MovieLens and NHANES have no pair (their canonical D is
-#                   already the widest admissible subinterval).
-#
-#     fig4 rows  -> canonical MCUB endpoints for all 13 instruments plus
-#                   R = |beta_IV| / |beta_DML| for the five that pass the
-#                   validity gate. Algorithm 1 stops before Stage 3 for
-#                   Scenario C (relevance or validity gate), so R is NOT
-#                   computed for the eight Scenario C instruments; they
-#                   are placed by signed distance only.
-#
-#   If any value in Phase 1 or Phase 2 shifts, update the data frames
-#   below and re-run this script.
+# INPUTS
+#   fig:power_curves      results/rstar_gate_power.csv   (13_rstar_gate_mc.R)
+#   fig:rstar             results/rstar_gate.csv         (12_rstar_gate.R)
+#   fig:diagnostic_space  results/rstar_gate.csv and
+#                         results/implied_endogeneity.csv (09: R, its
+#                         interval and the B share)
+#   fig:architecture is self-contained. The script looks for results/ inside
+#   or beside the scripts folder (see Paths below).
 #
 # Usage: Rscript scripts/08_figures.R, or source() it. To run it line by
 # line (for example with Ctrl+Enter in RStudio), first set the working
@@ -136,11 +116,32 @@ plot.window(xlim = c(0, 88), ylim = c(26, 96.5), xaxs = "i", yaxs = "i")
 xData <- 50;  yData <- 94
 xDML  <- 22;  xFS <- 70;  yEst <- 85.5
 xF    <- 70;  yF   <- 76.5
-xCR   <- 50;  yCR  <- 67
+xCR   <- 50;  yCR  <- 67.5
 xIV2  <- 50;  yIV2 <- 58.5
-xRat  <- 22;  yRat <- 49.5
+xRat  <- 22                   # y of the effect-ratio box: set below
 xR    <- 22;  yR   <- 41.5
 xA <- 9;  xB <- 35;  xC <- 78;  yOut <- 31
+
+# Two boxes hold plotmath with hats, subscripts and bars, whose height
+# depends on the platform's fonts (Windows fonts are larger than Linux
+# ones). Each box is sized to its two lines, so nothing touches its border:
+# the first line hangs from the top of the box and the second sits on its
+# bottom. A plain string's ink runs below its baseline by about 0.3 of its
+# height, so a string on the bottom line is raised by that much.
+ink_h <- function(lab, cex, font = 1) {
+  h <- strheight(lab, cex = cex, font = font)
+  if (is.character(lab)) 1.3 * h else h
+}
+padB <- 0.55; gapB <- 0.3   # padB leaves room for Windows ink beyond the bounding box
+iv_l1  <- expression(hat(beta)[IV] ~ "(2SLS)")
+rat_l1 <- "Effect ratio (R)"
+rat_l2 <- expression(group("|", hat(beta)[IV] / hat(beta)[DML], "|"))
+hIV2 <- max(4.5, 2 * padB + gapB + ink_h(iv_l1, 0.86, 2) + ink_h("(LATE)", 0.72))
+hRat <- max(5, 2 * padB + gapB + ink_h(rat_l1, 0.86, 2) + ink_h(rat_l2, 0.78))
+# The effect-ratio box keeps its bottom at 47 and grows upward, so the arrow
+# to the ratio gate below it keeps its length.
+yRat <- 47 + hRat / 2
+cat(sprintf("  IV box height %.2f, effect-ratio box height %.2f\n", hIV2, hRat))
 
 rrect(xData, yData, 28, 3.2, cBg, cBgb, lwd = 1.3)
 text(xData, yData, "Observed data  (Y, D, Z, X)", col = "gray15", cex = 1.0, font = 2)
@@ -152,50 +153,76 @@ rrect(xDML, yEst, 15, 4.5, cE, cEb, lwd = 1.3)
 text(xDML, yEst + 1,   "DML",   col = cEt, cex = 1.0, font = 2)
 text(xDML, yEst - 1.2, "(partially linear)", col = cEt, cex = 0.72)
 
-arr(xDML, yEst - 2.5, xDML, yRat + 2.75)
+arr(xDML, yEst - 2.5, xDML, yRat + hRat / 2 + 0.25)
 
 rrect(xFS, yEst, 15, 4.5, cE, cEb, lwd = 1.3)
 text(xFS, yEst + 1,   "First stage", col = cEt, cex = 0.92, font = 2)
 text(xFS, yEst - 1.2, "D ~ Z, X",   col = cEt, cex = 0.72)
 
-arr(xFS, yEst - 2.5, xF, yF + 3.25)
+# Weak-IV diamond: sized to its two lines, like the gate diamond below, so
+# the lines stay inside it whatever fonts the platform uses. The first line
+# sits on a baseline just above the centre and the second hangs just below
+# it (neither has descenders). The width is the smallest that keeps the
+# outer corners of both lines inside the diamond, with a margin.
+wk_l1 <- "Weak IV test"; wk_l2 <- "F < 10 ?"
+hWk <- 6.5
+gWk <- 0.25                                                  # half the gap between the lines
+dy1 <- gWk + strheight(wk_l1, cex = 0.78, font = 2) + 0.15   # top of line 1
+dy2 <- gWk + strheight(wk_l2, cex = 0.80, font = 2) + 0.15   # bottom of line 2
+wWk <- max(15,
+           2 * (strwidth(wk_l1, cex = 0.78, font = 2) / 2 + 0.4) / (1 - dy1 / (hWk / 2)),
+           2 * (strwidth(wk_l2, cex = 0.80, font = 2) / 2 + 0.4) / (1 - dy2 / (hWk / 2)))
+cat(sprintf("  weak-IV diamond: width %.1f\n", wWk))
 
-diam(xF, yF, 15, 6, cF, cFb)
-text(xF, yF + 0.7, "Weak IV test", col = cFt, cex = 0.78, font = 2)
-text(xF, yF - 1.3, "F < 10 ?",    col = cFt, cex = 0.80, font = 2)
+arr(xFS, yEst - 2.5, xF, yF + hWk / 2 + 0.25)
 
-arr_L_HV(xF - 7.5, yF, xCR, yCR + 3.75)
-text((xF - 7.5 + xCR) / 2, yF + 1.3, "No", col = "gray30", cex = 0.72, font = 2)
+diam(xF, yF, wWk, hWk, cF, cFb)
+text(xF, yF + gWk, wk_l1, col = cFt, cex = 0.78, font = 2, adj = c(0.5, 0))
+text(xF, yF - gWk, wk_l2, col = cFt, cex = 0.80, font = 2, adj = c(0.5, 1))
 
-arr_L_HV(xF + 7.5, yF, xC + 5, yOut + 4)
-text(xF + 10, yF + 1.3, "Yes", col = cCb, cex = 0.72, font = 2)
+# Validity gate: Algorithm 1, Stage 2 (does the confidence set for r*
+# meet the domain D?). The diamond is sized to its label, so the label
+# stays inside it whatever fonts the platform uses (Windows fonts are
+# wider than Linux ones).
+gate_lab <- expression(CS(r^"*") ~ meets ~ D * "?")
+hCR <- 8
+tw  <- max(strwidth(gate_lab, cex = 0.80), strwidth("CR gate", cex = 0.86, font = 2))
+th  <- max(strheight(gate_lab, cex = 0.80), 1.2 * strheight("CS(r) D", cex = 0.80))
+dCR <- 1.0 + 0.5 * th + 0.15       # depth of the label's lowest point below the centre
+wCR <- max(20, 2 * (tw / 2 + 0.5) / (1 - dCR / (hCR / 2)))
+cat(sprintf("  gate diamond: width %.1f (label width %.1f)\n", wCR, tw))
 
-# Validity gate: the bootstrap rule of Algorithm 1, Stage 2 (share of
-# resampled MCUB sets that contain zero at least tau_V), not a single set
-diam(xCR, yCR, 20, 7, cR, cRb)
-text(xCR, yCR + 1.0, "CR test (MCUB)", col = cRt, cex = 0.86, font = 2)
-text(xCR, yCR - 1.4, expression(hat(p)[B] >= tau[V] * "?"), col = cRt, cex = 0.86)
+arr_L_HV(xF - wWk / 2, yF, xCR, yCR + hCR / 2 + 0.25)
+text((xF - wWk / 2 + xCR) / 2, yF + 1.3, "No", col = "gray30", cex = 0.72, font = 2)
 
-arr_L_HV(xCR + 10, yCR, xC - 6, yOut + 4)
-text((xCR + 10 + xC - 6) / 2, yCR + 1.3, "Fail", col = cCb, cex = 0.72, font = 2)
+arr_L_HV(xF + wWk / 2, yF, xC + 5, yOut + 4)
+text(xF + wWk / 2 + 2.5, yF + 1.3, "Yes", col = cCb, cex = 0.72, font = 2)
 
-arr(xCR, yCR - 3.75, xIV2, yIV2 + 2.5)
-text(xCR + 4, (yCR - 3.75 + yIV2 + 2.5) / 2, "Pass", col = cAb, cex = 0.72, font = 2)
+diam(xCR, yCR, wCR, hCR, cR, cRb)
+text(xCR, yCR + 1.3, "CR gate", col = cRt, cex = 0.86, font = 2)
+text(xCR, yCR - 1.0, gate_lab, col = cRt, cex = 0.80)
 
-rrect(xIV2, yIV2, 20, 4.5, cE, cEb, lwd = 1.3)
-text(xIV2, yIV2 + 1,
-     expression(hat(beta)[IV] ~ "(2SLS)"), col = cEt, cex = 0.86, font = 2)
-text(xIV2, yIV2 - 1.3, "(LATE)", col = cEt, cex = 0.72)
+arr_L_HV(xCR + wCR / 2, yCR, xC - 6, yOut + 4)
+text((xCR + wCR / 2 + xC - 6) / 2, yCR + 1.3, "Fail", col = cCb, cex = 0.72, font = 2)
 
-arr_L_VH(xIV2, yIV2 - 2.5, xRat + 10, yRat)
+arr(xCR, yCR - hCR / 2 - 0.25, xIV2, yIV2 + hIV2 / 2 + 0.25)
+text(xCR + 4, (yCR - hCR / 2 - 0.25 + yIV2 + hIV2 / 2 + 0.25) / 2, "Pass",
+     col = cAb, cex = 0.72, font = 2)
 
-rrect(xRat, yRat, 20, 5, cT, cTb, lwd = 1.3)
-text(xRat, yRat + 1.1, "Effect ratio (R)", col = cTt, cex = 0.86, font = 2)
-text(xRat, yRat - 1.3,
-     expression(group("|", hat(beta)[IV] / hat(beta)[DML], "|")),
-     col = cTt, cex = 0.78)
+rrect(xIV2, yIV2, 20, hIV2, cE, cEb, lwd = 1.3)
+text(xIV2, yIV2 + hIV2 / 2 - padB, iv_l1, col = cEt, cex = 0.86, font = 2,
+     adj = c(0.5, 1))
+text(xIV2, yIV2 - hIV2 / 2 + padB + 0.3 * strheight("(LATE)", cex = 0.72), "(LATE)",
+     col = cEt, cex = 0.72, adj = c(0.5, 0))
 
-arr(xRat, yRat - 2.75, xR, yR + 4)
+arr_L_VH(xIV2, yIV2 - hIV2 / 2 - 0.25, xRat + 10, yRat)
+
+rrect(xRat, yRat, 20, hRat, cT, cTb, lwd = 1.3)
+text(xRat, yRat + hRat / 2 - padB, rat_l1, col = cTt, cex = 0.86, font = 2,
+     adj = c(0.5, 1))
+text(xRat, yRat - hRat / 2 + padB, rat_l2, col = cTt, cex = 0.78, adj = c(0.5, 0))
+
+arr(xRat, yRat - hRat / 2 - 0.25, xR, yR + 4)
 
 # Ratio gate: Algorithm 1, Stage 3, symmetric (Yes -> A, No -> B). The
 # caption adds the sign gate: estimates of opposite sign also go to B.
@@ -203,20 +230,22 @@ diam(xR, yR, 18, 7, cF, cFb)
 text(xR, yR + 0.2, expression(group("|", log ~ R, "|") < log ~ tau[R] * "?"),
      col = cFt, cex = 0.78, font = 2)
 
-arr_L_HV(xR - 8, yR, xA, yOut + 4)
+# The connectors start at the diamond's tips (half-width 9), so they do not
+# run into it.
+arr_L_HV(xR - 9, yR, xA, yOut + 4)
 text(xR - 10.5, yR + 1.5, "Yes", col = cAb, cex = 0.72, font = 2)
 
-arr_L_HV(xR + 8, yR, xB, yOut + 4)
+arr_L_HV(xR + 9, yR, xB, yOut + 4)
 text(xR + 10.5, yR + 1.5, "No",  col = cBb, cex = 0.72, font = 2)
 
 rrect(xA, yOut, 14, 7, cA, cAb)
 text(xA, yOut + 2.1, "A",               col = "white",   cex = 1.3, font = 2)
-text(xA, yOut - 0.3, "Valid IV",  col = "#0F4F0F", cex = 0.72, font = 2)
+text(xA, yOut - 0.3, "Not rejected",  col = "#0F4F0F", cex = 0.72, font = 2)
 text(xA, yOut - 2.3, expression("IV" %~~% "DML"), col = "#0F4F0F", cex = 0.72)
 
 rrect(xB, yOut, 13, 8, cB, cBb)
 text(xB, yOut + 2.1, "B",     col = "white",   cex = 1.3, font = 2)
-text(xB, yOut - 0.3, "Valid IV",  col = "#0E2E55", cex = 0.72, font = 2)
+text(xB, yOut - 0.3, "Not rejected",  col = "#0E2E55", cex = 0.72, font = 2)
 text(xB, yOut - 2.3, expression("IV" != "DML"), col = "#0E2E55", cex = 0.72)
 
 rrect(xC, yOut, 15, 7, cC, cCb)
@@ -228,333 +257,101 @@ dev.off()
 cat("Saved: fig1_dial_architecture.png\n")
 
 # =============================================================================
-# fig:power_curves -- Power curves (3 panels)
-# Requires results/cp_grid_summary_lean.csv from 07_power_curve_grid.R
-# =============================================================================
-
-cat("Generating fig:power_curves...\n")
-
-# Look for the CSV in results/ one level above the scripts folder (where 07
-# writes it), in results/ inside the scripts folder, and in or near the
-# working directory. If several copies exist, read the most recently written
-# one and list them all, so an old copy is not read by mistake.
-csv_name  <- "cp_grid_summary_lean.csv"
-csv_tried <- unique(normalizePath(c(
-  file.path(.repo_root,  "results", csv_name),
-  file.path(.script_dir, "results", csv_name),
-  file.path(getwd(), "results", csv_name),
-  file.path(getwd(), "..", "results", csv_name),
-  file.path(getwd(), csv_name)
-), mustWork = FALSE))
-csv_found <- csv_tried[file.exists(csv_tried)]
-csv_found <- csv_found[order(file.info(csv_found)$mtime, decreasing = TRUE)]
-csv_path  <- if (length(csv_found)) csv_found[1] else NA_character_
-.stamp    <- function(f) format(file.info(f)$mtime, "%Y-%m-%d %H:%M")
-if (length(csv_found) > 1) {
-  cat("  Found", length(csv_found), "copies of", csv_name, "(newest first):\n")
-  for (f in csv_found) cat("    ", .stamp(f), " ", f, "\n", sep = "")
-}
-
-if (is.na(csv_path)) {
-  warning("cp_grid_summary_lean.csv not found; run 07_power_curve_grid.R first. ",
-          "Skipping fig:power_curves. Looked in:\n  ",
-          paste(csv_tried, collapse = "\n  "))
-} else {
-  cat("  Reading ", csv_path, " (written ", .stamp(csv_path), ")\n", sep = "")
-  dat <- read.csv(csv_path, stringsAsFactors = FALSE)
-  cat(sprintf("  Loaded %d cells from cp_grid_summary_lean.csv\n", nrow(dat)))
-
-  ns     <- sort(unique(dat$n))
-  n_labs <- paste0("n=", formatC(ns, format = "d", big.mark = ","))
-
-  dat$n_label <- factor(
-    paste0("n=", formatC(dat$n, format = "d", big.mark = ",")),
-    levels = n_labs
-  )
-
-  NCOLORS <- c(
-    "n=1,107"  = "#1F77B4",
-    "n=1,534"  = "#2CA02C",
-    "n=5,000"  = "#D5A03A",
-    "n=10,000" = "#D62728",
-    "n=50,000" = "#9467BD"
-  )
-
-  # ---- Power curves for panels a and b -------------------------------------
-  # Straight lines between grid points look jagged where the delta grid is
-  # coarse: some sample sizes have only one or two grid points inside the
-  # drop. The figure therefore joins each sample size's Monte Carlo
-  # estimates with a monotone cubic curve (Fritsch-Carlson; method
-  # "monoH.FC" of stats::splinefun). The curve passes through every
-  # estimate, stays flat where the estimates are flat, and does not
-  # overshoot them. delta*_n is where this curve first crosses 0.5.
-  # Set CURVE_FIT <- "linear" for straight lines and linear interpolation,
-  # as before.
-  CURVE_FIT <- "spline"
-
-  dat  <- dat[order(dat$n, dat$delta), ]
-  by_n <- split(dat, dat$n_label, drop = TRUE)
-
-  # Coverage as a function of delta, one function per sample size
-  funs <- lapply(by_n, function(d) {
-    f <- if (CURVE_FIT == "spline")
-      splinefun(d$delta, d$cp_raw, method = "monoH.FC")
-    else approxfun(d$delta, d$cp_raw)
-    function(x) pmin(1, pmax(0, f(x)))
-  })
-
-  # delta*_n: where the curve first crosses 0.5
-  cross_half <- function(d, f) {
-    cp  <- d$cp_raw
-    idx <- which(cp[-length(cp)] > 0.5 & cp[-1] <= 0.5)
-    if (!length(idx)) return(NA_real_)
-    i <- idx[1]
-    if (cp[i + 1] == 0.5) return(d$delta[i + 1])
-    uniroot(function(x) f(x) - 0.5, c(d$delta[i], d$delta[i + 1]),
-            tol = 1e-10)$root
-  }
-
-  delta_star <- do.call(rbind, lapply(names(by_n), function(lab) {
-    d <- by_n[[lab]]
-    data.frame(n = d$n[1], n_label = d$n_label[1],
-               delta_star = cross_half(d, funs[[lab]]))
-  }))
-
-  # Curve coordinates for a panel that spans [lo, hi]
-  curve_data <- function(lo, hi) {
-    do.call(rbind, lapply(names(by_n), function(lab) {
-      d <- by_n[[lab]]
-      x <- seq(max(lo, min(d$delta)), min(hi, max(d$delta)), length.out = 3001)
-      data.frame(n_label = d$n_label[1], delta = x, cp = funs[[lab]](x))
-    }))
-  }
-
-  # Print the crossings that Section 4.3 and the fig:power_curves caption
-  # quote. In the Gaussian design of 07, the identified set contains zero
-  # whenever delta <= rho_DU * cor(Z, D) = 0.5 * 0.25 = delta*_inf.
-  DELTA_INF <- 0.5 * 0.25
-  cat(sprintf("  50%% crossings, %s curves (copy into Section 4.3 and the fig:power_curves caption):\n",
-              CURVE_FIT))
-  for (k in seq_len(nrow(delta_star))) {
-    cat(sprintf("    n = %6d   delta*_n = %.3f   excess over delta*_inf = %.3f\n",
-                as.integer(delta_star$n[k]), delta_star$delta_star[k],
-                delta_star$delta_star[k] - DELTA_INF))
-  }
-
-  theme_fig2 <- function() {
-    theme_minimal(base_size = 11) +
-      theme(
-        plot.title       = element_text(size = 12, face = "plain"),
-        legend.position  = "bottom",
-        legend.title     = element_text(face = "bold"),
-        panel.grid.minor = element_blank(),
-        plot.margin      = margin(5, 5, 5, 5)
-      )
-  }
-
-  # Panel a. PANEL_A <- "scaled" plots coverage against the scaled distance
-  # sqrt(n) * (delta - delta*_inf). Under the Gaussian approximation of
-  # Remark 4, CP_n depends on n and delta near the threshold only through
-  # this product, so the five curves should nearly coincide if
-  # delta*_n - delta*_inf shrinks like 1/sqrt(n). PANEL_A <- "delta" plots
-  # the curves against delta from 0.05 to 0.30 instead.
-  PANEL_A <- "scaled"
-
-  if (PANEL_A == "scaled") {
-    S_LO <- -0.5; S_HI <- 3
-    scaled_curves <- do.call(rbind, lapply(names(by_n), function(lab) {
-      d  <- by_n[[lab]]; rn <- sqrt(d$n[1])
-      x  <- seq(max(min(d$delta), DELTA_INF + S_LO / rn),
-                min(max(d$delta), DELTA_INF + S_HI / rn), length.out = 3001)
-      data.frame(n_label = d$n_label[1], s = rn * (x - DELTA_INF),
-                 cp = funs[[lab]](x))
-    }))
-    scaled_points   <- dat
-    scaled_points$s <- sqrt(scaled_points$n) * (scaled_points$delta - DELTA_INF)
-    scaled_points   <- scaled_points[scaled_points$s >= S_LO &
-                                       scaled_points$s <= S_HI, ]
-
-    p_a <- ggplot(scaled_curves,
-                  aes(x = s, y = cp, colour = n_label, group = n_label)) +
-      geom_hline(yintercept = 0.95, linetype = "dotted",
-                 colour = "grey50", linewidth = 0.3) +
-      geom_hline(yintercept = 0.5, linetype = "dotted",
-                 colour = "grey30", linewidth = 0.3) +
-      # delta = delta*_inf, where the identified set starts to exclude zero
-      geom_vline(xintercept = 0, linetype = "dashed",
-                 colour = "grey50", linewidth = 0.3) +
-      annotate("text", x = 0.06, y = 0.06, hjust = 0, vjust = 0,
-               label = "delta[infinity]^'*'", parse = TRUE,
-               colour = "grey35", size = 3.2) +
-      geom_line(linewidth = 0.8) +
-      geom_point(data = scaled_points, aes(x = s, y = cp_raw), size = 1.3) +
-      scale_x_continuous(
-        limits = c(S_LO, S_HI),
-        breaks = seq(-0.5, 3, by = 0.5),
-        expand = c(0.005, 0)
-      ) +
-      scale_y_continuous(
-        breaks = c(0, 0.25, 0.5, 0.75, 1.0),
-        limits = c(-0.02, 1.02), expand = c(0, 0)
-      ) +
-      scale_colour_manual(values = NCOLORS, name = "Sample size") +
-      labs(
-        title = expression("(a) Coverage on the " * sqrt(n) * " scale"),
-        x     = expression(sqrt(n) * (delta - delta[infinity]^"*")),
-        y     = expression(CP[n](delta))
-      ) +
-      theme_fig2() +
-      guides(colour = "none")  # the figure shows one legend, panel c's
-  } else {
-    p_a <- ggplot(curve_data(0.05, 0.30),
-                  aes(x = delta, y = cp, colour = n_label, group = n_label)) +
-      geom_hline(yintercept = 0.95, linetype = "dotted",
-                 colour = "grey50", linewidth = 0.3) +
-      geom_hline(yintercept = 0.5, linetype = "dotted",
-                 colour = "grey30", linewidth = 0.3) +
-      geom_vline(data = delta_star,
-                 aes(xintercept = delta_star, colour = n_label),
-                 linetype = "dashed", linewidth = 0.4, alpha = 0.7,
-                 show.legend = FALSE) +
-      geom_line(linewidth = 0.8) +
-      scale_x_continuous(
-        limits = c(0.05, 0.30),
-        breaks = c(0.05, 0.10, 0.15, 0.20, 0.25, 0.30),
-        expand = c(0.005, 0)
-      ) +
-      scale_y_continuous(
-        breaks = c(0, 0.25, 0.5, 0.75, 1.0),
-        limits = c(-0.02, 1.02), expand = c(0, 0)
-      ) +
-      scale_colour_manual(values = NCOLORS, name = "Sample size") +
-      labs(
-        title = "(a) CR test coverage of zero under exclusion violations",
-        x     = expression(delta == "|" * rho[ZU] * "|"),
-        y     = expression(CP[n](delta))
-      ) +
-      theme_fig2() +
-      guides(colour = "none")  # the figure shows one legend, panel c's
-  }
-
-  # Panel b: transition zone zoom; points are the Monte Carlo estimates
-  zoom_lo <- 0.125; zoom_hi <- 0.200
-  dat_zoom <- dat %>% filter(delta >= zoom_lo & delta <= zoom_hi)
-
-  p_b <- ggplot(curve_data(zoom_lo, zoom_hi),
-                aes(x = delta, y = cp, colour = n_label, group = n_label)) +
-    geom_hline(yintercept = 0.5, linetype = "dotted",
-               colour = "grey30", linewidth = 0.3) +
-    geom_vline(
-      data = delta_star %>%
-        filter(!is.na(delta_star) &
-                 delta_star >= zoom_lo & delta_star <= zoom_hi),
-      aes(xintercept = delta_star, colour = n_label),
-      linetype = "dashed", linewidth = 0.4, alpha = 0.7,
-      show.legend = FALSE
-    ) +
-    geom_line(linewidth = 0.8) +
-    geom_point(data = dat_zoom, aes(x = delta, y = cp_raw), size = 1.6) +
-    scale_x_continuous(
-      limits = c(zoom_lo, zoom_hi),
-      breaks = seq(0.13, 0.20, by = 0.01),
-      expand = c(0.005, 0)
-    ) +
-    scale_y_continuous(
-      breaks = c(0, 0.25, 0.5, 0.75, 1.0),
-      limits = c(-0.02, 1.02), expand = c(0, 0)
-    ) +
-    scale_colour_manual(values = NCOLORS, name = "Sample size") +
-    labs(
-      title = expression("(b) Transition zone: " * delta * " near " * delta[n]^"*"),
-      x     = expression(delta * " (transition zone)"),
-      y     = expression(CP[n](delta))
-    ) +
-    theme_fig2() +
-    guides(colour = "none")  # the figure shows one legend, panel c's
-
-  # Panel c: CI width
-  p_c <- ggplot(dat, aes(x = delta, y = ci_w_mean,
-                         colour = n_label, group = n_label)) +
-    geom_line(linewidth = 0.8) +
-    geom_point(size = 1.0) +
-    scale_x_log10(
-      breaks = c(0.001, 0.003, 0.01, 0.03, 0.1, 0.3),
-      labels = c("0.001", "0.003", "0.01", "0.03", "0.1", "0.3")
-    ) +
-    scale_y_continuous(
-      limits = c(0.10, 0.40),
-      breaks = seq(0.10, 0.40, by = 0.05)
-    ) +
-    scale_colour_manual(values = NCOLORS, name = "Sample size") +
-    labs(
-      title = expression("(c) MCUB CI width: " * 1/sqrt(n) * " behaviour"),
-      x     = expression(delta == "|" * rho[ZU] * "|"),
-      y     = expression("Mean width of " * widehat(C)[MCUB])
-    ) +
-    theme_fig2()
-
-  # Panels a and b hide their legends, so patchwork collects a single
-  # legend (panel c's) and centres it under the whole figure. Three
-  # separate legends do not merge, because the panels use different point
-  # sizes, and the third one is cut off at the right edge.
-  combined <- (p_a | p_b | p_c) +
-    plot_layout(guides = "collect") &
-    theme(legend.position = "bottom")
-
-  # bg = "white": theme_minimal() leaves the plot background blank, so
-  # ggsave() would otherwise write a transparent PNG
-  ggsave(file.path(FIG_DIR, "fig2_combined.png"), combined,
-         width = 16, height = 4.8, units = "in", dpi = 300, bg = "white")
-  cat("Saved: fig2_combined.png\n")
-}
-
-# =============================================================================
-# fig:domain_sens -- Domain sensitivity (within-sign protocol)
+# fig:power_curves -- rejection rate of the validity gate (2 panels)
+# Requires results/rstar_gate_power.csv from 13_rstar_gate_mc.R (part B).
 #
-# Each row's (lower, upper) is a canonical or within-sign wide MCUB set, and
-# p_hat is its bootstrap share (columns CI_MCUB / CI_Bei and p_hat_B of the
-# CSVs from 02 and 03). All bootstraps redraw the raw rows and redo the
-# residualise-and-project step (foundation/bootstrap_rule.R, 2026-10-28).
-# Values from the run of 02 and 03 on 2 November 2026.
-# The verdict is the bootstrap rule p_hat >= tau_V = 0.95, not zero-in-set:
-# Card's sets contain zero but fail the rule.
-#   Di Tella judgeAlreadyUsedEM  canonical (0.15, 0.25)  [-0.544, +0.454]  02
-#                                wide      (0,    0.8)   [-0.614, +0.928]  02
-#   Di Tella percJudgeSentToEM   canonical (0,    0.25)  [-0.204, +0.365]  02
-#                                wide      (0,    0.8)   [-0.202, +0.873]  02
-#   Galiani highnumber           canonical (-0.2,  0)    [-0.194, +0.016]  02
-#                                wide      (-0.8,  0)    [-0.795, +0.016]  02
-#   Banerjee instru              canonical (-0.6, -0.4)  [-0.162, +0.224]  02
-#                                wide      (-0.8,  0)    [-0.433, +0.596]  02
-#   Burde buildschool            canonical (0,    0.4)   [+0.146, +0.736]  02
-#                                wide      (0,    0.8)   [+0.146, +0.982]  02
-#   Card fatheduc                canonical (0,    0.4)   [-0.071, +0.584]  03
-#                                wide      (0,    0.8)   [-0.051, +0.904]  03
-#   Papke sole_plan              canonical (0,    0.3)   [+0.101, +0.964]  03
-#                                wide      (0,    0.8)   [+0.101, +1.000]  03
-#   Papke plan_age               canonical (0,    0.3)   [+0.663, +1.000]  03
-#                                wide      (0,    0.8)   [+0.685, +1.000]  03
-#   (upper endpoints 1.082, 1.021 and 1.023 before clipping)
-# Rows with domain_label "cross_sign_sensitivity" in phase1_results.csv
-# are NOT a robustness check and are deliberately excluded.
-# The row labels call the wide domain "Robustness", as the paper does.
+#   (a) rejection rate against delta = cor(Z, U) for each n; dashed line at
+#       delta*_inf = rho_DU cor(Z, D) = 0.125, dotted line at alpha0 = 0.05
+#   (b) against sqrt(n) (delta - delta*_inf), with the Gaussian prediction
+#       Phi(sqrt(n) kappa / s - z_{1 - alpha0}) of prop:gate(d). In this
+#       design kappa = (delta - delta*) / sqrt(1 - rho_DU^2) at the edge
+#       e = 0; s = s(0) is the asymptotic sd of sqrt(n) g(rho_hat, 0) at
+#       delta = delta*, computed here by simulation.
 # =============================================================================
 
-cat("Generating fig:domain_sens (domain sensitivity)...\n")
+cat("Generating fig:power_curves (gate)...\n")
+.pw_file <- file.path(.repo_root, "results", "rstar_gate_power.csv")
+if (!file.exists(.pw_file)) {
+  warning("results/rstar_gate_power.csv not found; run 13_rstar_gate_mc.R first. ",
+          "Skipping fig:power_curves.")
+} else {
+  pw <- utils::read.csv(.pw_file)
+  RHO_P <- 0.50; A_P <- 0.25; ALPHA0_P <- 0.05
+  DSTAR <- RHO_P * A_P
+  # s(0) at delta = delta*: sd of sqrt(n) g(rho_hat, 0) over simulated samples
+  set.seed(2027)
+  s0 <- local({
+    n0 <- 5000L
+    c2 <- (DSTAR - A_P * RHO_P) / sqrt(1 - RHO_P^2); c3 <- sqrt(1 - A_P^2 - c2^2)
+    g0 <- replicate(2000, {
+      Dt <- rnorm(n0); Vt <- rnorm(n0); U <- RHO_P * Dt + sqrt(1 - RHO_P^2) * Vt
+      Z <- A_P * Dt + c2 * Vt + c3 * rnorm(n0); Y <- 0.30 * Dt + U
+      r <- cor(cbind(Dt, Y, Z))
+      (r[2, 3] - r[1, 2] * r[1, 3]) / sqrt(1 - r[1, 2]^2)   # = -g(rho_hat, 0)
+    })
+    sqrt(n0) * stats::sd(g0)
+  })
+  cat(sprintf("  s(0) at delta* = %.3f\n", s0))
+  pw$n_lab <- factor(sprintf("n = %s", format(pw$n, big.mark = ",", trim = TRUE)),
+                     levels = sprintf("n = %s", format(sort(unique(pw$n)), big.mark = ",", trim = TRUE)))
+  pw$h <- sqrt(pw$n) * (pw$delta - DSTAR)
+  pcols <- c("#7FA6D9", "#2E5EAA", "#0B2A5B")
+  th2 <- theme_minimal(base_size = 10) +
+    theme(panel.grid.minor = element_blank(), legend.position = "bottom",
+          plot.title = element_text(face = "bold", size = 10))
+  # Each n has its own colour and marker shape, so the three sizes stay
+  # distinguishable in panel (b), where they fall on one curve.
+  pshapes <- c(16, 17, 15)
+  pa <- ggplot(pw, aes(delta, reject, colour = n_lab, shape = n_lab)) +
+    geom_hline(yintercept = ALPHA0_P, linetype = "dotted", colour = "gray45") +
+    geom_vline(xintercept = DSTAR, linetype = "dashed", colour = "gray45") +
+    geom_line(linewidth = 0.6) + geom_point(size = 1.8) +
+    scale_colour_manual(values = pcols, name = NULL) +
+    scale_shape_manual(values = pshapes, name = NULL) +
+    scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.25)) +
+    labs(title = "(a) Rejection rate against the violation",
+         x = expression(delta == cor(Z, U)), y = "Rejection rate") + th2
+  hh <- seq(0, 6, length.out = 300)
+  pred <- data.frame(h = hh,
+    p = stats::pnorm(hh / sqrt(1 - RHO_P^2) / s0 - stats::qnorm(1 - ALPHA0_P)))
+  pb <- ggplot(pw[pw$delta <= 0.20, ], aes(h, reject, colour = n_lab, shape = n_lab)) +
+    geom_hline(yintercept = ALPHA0_P, linetype = "dotted", colour = "gray45") +
+    geom_vline(xintercept = 0, linetype = "dashed", colour = "gray45") +
+    geom_line(data = pred, aes(h, p), inherit.aes = FALSE, colour = "gray20",
+              linewidth = 0.7) +
+    geom_point(size = 1.9, alpha = 0.85) +
+    annotate("text", x = 2.0, y = 0.42, hjust = 0, size = 2.7, colour = "gray20",
+             lineheight = 0.9, label = "Gaussian prediction\n(one curve for all n)") +
+    scale_colour_manual(values = pcols, name = NULL) +
+    scale_shape_manual(values = pshapes, name = NULL) +
+    scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.25)) +
+    coord_cartesian(xlim = c(-3, 6)) +
+    labs(title = "(b) Against the local alternative",
+         x = expression(sqrt(n) ~ (delta - delta[infinity]^"*")), y = NULL) + th2 +
+    guides(colour = "none", shape = "none")
+  p2 <- (pa | pb) + plot_layout(guides = "collect") &
+    theme(legend.position = "bottom")
+  ggsave(file.path(FIG_DIR, "fig2_gate_power.png"), p2,
+         width = 7.4, height = 3.4, dpi = 300, bg = "white")
+  cat("Saved: fig2_gate_power.png\n")
+}
+
+# =============================================================================
+# fig:rstar -- implied endogeneity r* and its 90% confidence set against D
+#
+# One row per instrument that passes the relevance gate: the canonical
+# domain D (shaded band), r* (point) and the 90% confidence set CS_n of
+# the gate (bar), from results/rstar_gate.csv (12_rstar_gate.R). Colour:
+# does the set meet D (the gate passes)? For a rejected instrument, the
+# label is the breakdown distance d(r*, D).
+# =============================================================================
+
+cat("Generating fig:rstar (r* and its confidence set against the domain)...\n")
 
 cValid   <- "#3D8A3D"
 cInvalid <- "#C9433D"
-
-# Bootstrap shares p_hat_B (B = 500; column p_hat_B of the 02 and 03
-# outputs). _c = canonical domain, _w = within-sign wide domain.
-TAU2 <- 0.95
-PHAT <- list(
-  jaue_c = 0.958, jaue_w = 0.998, pjse_c = 0.996, pjse_w = 0.988,
-  gal_c  = 1.000, gal_w  = 1.000, ban_c  = 1.000, ban_w  = 1.000,
-  bur_c  = 0.006, bur_w  = 0.004, card_c = 0.814, card_w = 0.798,
-  sole_c = 0.284, sole_w = 0.258, age_c  = 0.000, age_w  = 0.000,
-  inc    = 0.000, edu    = 0.062, genres = 1.000, year   = 0.016,
-  sequel = 0.000)
+TAU_R <- 1.5
+TAU_L <- 0.90
 
 theme_dial <- function() {
   theme_minimal(base_size = 10) +
@@ -573,303 +370,254 @@ theme_dial <- function() {
     )
 }
 
-fig3 <- data.frame(
-  row_label = c(
-    "Di Tella judgeAlreadyUsedEM\nRobustness (0, 0.8)",
-    "Di Tella judgeAlreadyUsedEM\nCanonical  (0.15, 0.25)",
-    "Di Tella percJudgeSentToEM\nRobustness (0, 0.8)",
-    "Di Tella percJudgeSentToEM\nCanonical  (0, 0.25)",
-    "Galiani highnumber\nRobustness (-0.8, 0)",
-    "Galiani highnumber\nCanonical  (-0.2, 0)",
-    "Banerjee instru\nRobustness (-0.8, 0)",
-    "Banerjee instru\nCanonical  (-0.6, -0.4)",
-    "Burde buildschool\nRobustness (0, 0.8)",
-    "Burde buildschool\nCanonical  (0, 0.4)",
-    "Card fatheduc\nRobustness (0, 0.8)",
-    "Card fatheduc\nCanonical  (0, 0.4)",
-    "Papke sole_plan\nRobustness (0, 0.8)",
-    "Papke sole_plan\nCanonical  (0, 0.3)",
-    "Papke plan_age\nRobustness (0, 0.8)",
-    "Papke plan_age\nCanonical  (0, 0.3)"
-  ),
-  lower = c(-0.614, -0.544, -0.202, -0.204, -0.795, -0.194,
-            -0.433, -0.162,  0.146,  0.146, -0.051, -0.071,
-             0.101,  0.101,  0.685,  0.663),
-  upper = c( 0.928,  0.454,  0.873,  0.365,  0.016,  0.016,
-             0.596,  0.224,  0.982,  0.736,  0.904,  0.584,
-             1.000,  0.964,  1.000,  1.000),
-  # bootstrap shares p_hat_B (B = 500), same row order
-  p_hat = c(PHAT$jaue_w, PHAT$jaue_c, PHAT$pjse_w, PHAT$pjse_c,
-            PHAT$gal_w,  PHAT$gal_c,  PHAT$ban_w,  PHAT$ban_c,
-            PHAT$bur_w,  PHAT$bur_c,  PHAT$card_w, PHAT$card_c,
-            PHAT$sole_w, PHAT$sole_c, PHAT$age_w,  PHAT$age_c),
-  stringsAsFactors = FALSE
-)
-fig3$verdict <- ifelse(fig3$p_hat >= TAU2, "Valid", "Invalid")
-fig3$id <- seq_len(nrow(fig3))
+.gate_file <- file.path(.repo_root, "results", "rstar_gate.csv")
+.ie_file   <- file.path(.repo_root, "results", "implied_endogeneity.csv")
+if (!file.exists(.gate_file)) stop("results/rstar_gate.csv not found; run 12 first")
+if (!file.exists(.ie_file))   stop("results/implied_endogeneity.csv not found; run 09 first")
+gt <- utils::read.csv(.gate_file, stringsAsFactors = FALSE)
+ie <- utils::read.csv(.ie_file, stringsAsFactors = FALSE)
+stopifnot(!anyNA(gt$V))
+gt$weak <- gt$F_first < 10
+gt$pass <- gt$V == 1L & !gt$weak
 
-# Guard: every pair must share a verdict (the within-sign protocol claim).
-stopifnot(all(fig3$verdict[c(TRUE, FALSE)] == fig3$verdict[c(FALSE, TRUE)]))
-# Guard: every Valid set contains zero (the rule never passes a set that
-# excludes zero in these data); Invalid sets may contain zero (Card).
-stopifnot(all(fig3$lower[fig3$verdict == "Valid"] <= 0 &
-              fig3$upper[fig3$verdict == "Valid"] >= 0))
+f3 <- gt[!gt$weak, ]
+f3$label <- paste(f3$study, f3$instrument)
+f3 <- f3[order(f3$pass, f3$margin), ]
+f3$row <- factor(f3$label, levels = f3$label)
+f3$verdict <- ifelse(f3$pass, "Passes the gate", "Fails the gate")
+f3$txt <- ifelse(f3$pass, "", sprintf("d = %.3f", f3$dist))
 
-fig3$row_factor <- factor(fig3$row_label, levels = rev(fig3$row_label))
-
-p3 <- ggplot(fig3, aes(y = row_factor)) +
-  geom_vline(xintercept = 0, linetype = "dashed",
-             color = "gray40", linewidth = 0.4) +
-  geom_segment(
-    aes(x = lower, xend = upper, yend = row_factor, color = verdict),
-    linewidth = 3.2, lineend = "round"
-  ) +
-  geom_point(aes(x = lower, color = verdict), size = 1.8) +
-  geom_point(aes(x = upper, color = verdict), size = 1.8) +
-  annotate("text", x = 0.02, y = 0.55,
-           label = expression(rho[ZU] == 0),
-           color = "gray30", size = 2.9, hjust = 0, vjust = 0) +
-  scale_color_manual(
-    values = c("Valid" = cValid, "Invalid" = cInvalid),
-    breaks = c("Valid", "Invalid")
-  ) +
-  scale_x_continuous(
-    limits = c(-0.85, 1.00),
-    breaks = c(-0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1.0)
-  ) +
-  labs(
-    x        = expression("MCUB set for " * rho[ZU]),
-    y        = NULL,
-    title    = "Domain Sensitivity: MCUB Sets (Within-Sign Protocol)",
-    subtitle = "Each instrument shown under two within-sign domains; no verdict flips within the elicited half-line",
-    color    = "Verdict"
-  ) +
+f3$y <- as.numeric(f3$row)
+p3 <- ggplot(f3, aes(y = y)) +
+  geom_rect(aes(xmin = D_lo, xmax = D_hi, ymin = y - 0.38, ymax = y + 0.38),
+            fill = "gray80", alpha = 0.6) +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "gray45", linewidth = 0.4) +
+  geom_errorbarh(aes(xmin = cs_lo, xmax = cs_hi, colour = verdict),
+                 height = 0.25, linewidth = 0.6) +
+  geom_point(aes(x = r_star, colour = verdict), size = 2.4) +
+  geom_text(aes(x = pmax(cs_hi, D_hi) + 0.03, label = txt), hjust = 0,
+            size = 2.7, colour = cInvalid) +
+  scale_colour_manual(values = c("Passes the gate" = cValid, "Fails the gate" = cInvalid),
+                      breaks = c("Passes the gate", "Fails the gate")) +
+  scale_x_continuous(limits = c(-1, 1.05), breaks = seq(-1, 1, 0.25)) +
+  scale_y_continuous(breaks = f3$y, labels = as.character(f3$row),
+                     expand = expansion(add = 0.6)) +
+  labs(x = expression("Implied endogeneity " * r^"*" * " with its 90% set (shaded: domain " * D * ")"),
+       y = NULL, colour = NULL) +
   theme_dial() +
-  guides(color = guide_legend(override.aes = list(linewidth = 5, size = 0)))
+  theme(panel.grid.major.y = element_blank())
 
-ggsave(file.path(FIG_DIR, "fig3_domain_sensitivity.png"), p3,
-       width = 8.2, height = 8.6, dpi = 300, bg = "white")
-cat("Saved: fig3_domain_sensitivity.png\n")
+ggsave(file.path(FIG_DIR, "fig3_rstar_domain.png"), p3,
+       width = 7.4, height = 4.6, dpi = 300, bg = "white")
+cat("Saved: fig3_rstar_domain.png\n")
 
 # =============================================================================
-# fig:diagnostic_space -- DIAL diagnostic space (13 instruments, two panels)
+# fig:diagnostic_space -- DIAL diagnostic space (13 instruments, three panels)
 #
-# Both panels use the signed distance d from zero to the nearest endpoint of
-# the canonical MCUB set: d = min(-lower, upper), which is the depth of zero
-# inside the set when lower <= 0 <= upper (d >= 0) and minus the gap to the
-# set otherwise (d < 0).
-#
-#   Left panel  -- the eight Scenario C instruments, placed by d alone.
-#                  Algorithm 1 stops at the relevance or validity gate, so
-#                  R is not computed for them. Open triangles mark the two
-#                  weak instruments (first-stage F < 10), whose MCUB sets
-#                  also exclude zero. Card's set contains zero (d > 0), but
-#                  it fails the bootstrap rule (p_hat_B < tau_V); an open
-#                  circle marks it.
-#   Right panel -- the five instruments that pass both gates, placed by d
-#                  and R = |beta_IV| / |beta_DML|. Scenario A is the band
-#                  1/tau_R < R < tau_R with estimates of the same sign
-#                  (dashed lines at 1/1.5 and 1.5); Scenario B lies outside
-#                  it, or has estimates of opposite sign (open circle:
-#                  MovieLens num_genres).
-#
-# Canonical MCUB endpoints (tab:empirical_full):
-#   MovieLens num_genres      (0, 0.8)      [-0.400, +0.695]  R = 0.62  B   (item level; signs differ)
-#   Di Tella judgeAlreadyUsed (0.15, 0.25)  [-0.544, +0.454]  R = 3.13  B
-#   Di Tella percJudgeSent    (0, 0.25)     [-0.204, +0.365]  R = 1.37  A
-#   Galiani highnumber        (-0.2, 0)     [-0.194, +0.016]  R = 2.44  B
-#   Banerjee instru           (-0.6, -0.4)  [-0.162, +0.224]  R = 1.84  B
-#   Papke sole_plan           (0, 0.3)      [+0.101, +0.964]            C
-#   Papke plan_age            (0, 0.3)      [+0.663, +1.000]            C
-#   NHANES income             (0, 0.8)      [+0.511, +1.000]            C
-#   NHANES education          (0, 0.8)      [+0.157, +1.000]            C
-#   Card fatheduc             (0, 0.4)      [-0.071, +0.584]            C   (fails the rule)
-#   Burde buildschool         (0, 0.4)      [+0.146, +0.736]            C
-#   MovieLens release_year    (-0.8, 0)     [-1.000, -0.244]            C   (weak: F = 1.7)
-#   MovieLens is_sequel       (-0.8, 0)     [-1.000, -0.524]            C   (weak: F = 1.3)
-#   MovieLens rows come from run_movielens_item_level() in 03. R comes from
-#   the seeded DML fits of 09_implied_endogeneity.R (run of 4 November
-#   2026), which also gives its bootstrap intervals (tab:locality).
+#   Left and middle panels -- the six instruments that pass the relevance
+#                  and validity gates, sorted by the share of bootstrap
+#                  resamples that land in Scenario B.
+#                  Left: R with its 95% bootstrap interval (log scale);
+#                  green band: Scenario A, blue regions: Scenario B.
+#                  Middle: the share in B, which sets the label of
+#                  Algorithm 1 (A when at most 1 - TAU_L of the resamples
+#                  land in B, B when at least TAU_L do, inconclusive
+#                  otherwise). Open circle: IV and DML of opposite sign
+#                  (num_genres), with the note "signs differ" under its
+#                  share in the middle panel.
+#   Right panel -- the seven Scenario C instruments (rejected or weak), by
+#                  the signed distance of r* to the closed domain D (grey;
+#                  for all seven, minus the breakdown distance). For the
+#                  five that the validity gate rejects, the bar is the 90%
+#                  set CS(r*) in the same units: it ends short of D, the
+#                  "Fail" branch of "CS(r*) meets D?" in fig:architecture.
+#                  Open circles: the two weak instruments (no gate, no set).
+#   The panels run A and B, then C, as the outcomes do in fig:architecture.
 # =============================================================================
 
 cat("Generating fig:diagnostic_space (DIAL diagnostic space)...\n")
 
-cA <- "#3D8A3D"; cB <- "#2E5EAA"; cC <- "#C9433D"
-TAU_R <- 1.5
+cA <- "#3D8A3D"; cB <- "#2E5EAA"; cI <- "#8A6D3B"; cC <- "#C9433D"
 
-fig4 <- data.frame(
-  label = c(
-    "MovieLens num_genres", "Di Tella judgeAlreadyUsedEM",
-    "Di Tella percJudgeSentToEM", "Galiani highnumber",
-    "Banerjee instru",
-    "Papke sole_plan", "Papke plan_age",
-    "NHANES income", "NHANES education",
-    "Card fatheduc", "Burde buildschool",
-    "MovieLens release_year", "MovieLens is_sequel"
-  ),
-  lower = c(-0.400, -0.544, -0.204, -0.194, -0.162,
-             0.101,  0.663,  0.511,  0.157, -0.071,  0.146,
-            -1.000, -1.000),
-  upper = c( 0.695,  0.454,  0.365,  0.016,  0.224,
-             0.964,  1.000,  1.000,  1.000,  0.584,  0.736,
-            -0.244, -0.524),
-  p_hat = c(PHAT$genres, PHAT$jaue_c, PHAT$pjse_c, PHAT$gal_c, PHAT$ban_c,
-            PHAT$sole_c, PHAT$age_c, PHAT$inc, PHAT$edu, PHAT$card_c,
-            PHAT$bur_c, PHAT$year, PHAT$sequel),
-  ratio = c(0.62, 3.13, 1.37, 2.44, 1.84, rep(NA_real_, 8)),
-  # IV and DML estimates of opposite sign (sign gate of Algorithm 1)
-  sign_diff = c(TRUE, FALSE, FALSE, FALSE, FALSE, rep(NA, 8)),
-  dial  = c("B", "B", "A", "B", "B", rep("C", 8)),
-  weak  = c(rep(FALSE, 11), TRUE, TRUE),
-  stringsAsFactors = FALSE
-)
-# Two-line labels for the right panel
-fig4$label2 <- sub("^(Di Tella|MovieLens|Galiani|Banerjee) ", "\\1\n", fig4$label)
-fig4$d <- pmin(-fig4$lower, fig4$upper)
-# Scenario C instruments whose set contains zero but which fail the rule
-fig4$rule_only <- fig4$dial == "C" & fig4$d >= 0
+dd <- merge(gt[, c("study", "instrument", "margin", "dist", "pass", "weak", "V",
+                   "cs_lo", "cs_hi", "D_lo", "D_hi")],
+            ie[, c("instrument", "b_IV", "b_DML", "R", "R_lo", "R_hi", "share_B")],
+            by = "instrument", sort = FALSE)
+dd$label3 <- ifelse(!dd$pass, "C",
+               ifelse(dd$share_B >= TAU_L, "B",
+                 ifelse(dd$share_B <= 1 - TAU_L, "A", "inconclusive")))
+dd$sign_diff <- !is.na(dd$b_DML) & sign(dd$b_IV) != sign(dd$b_DML)
 
-# Guards: the verdict follows Algorithm 1 (relevance, then the bootstrap
-# rule, then the ratio), and R exists exactly for the instruments that
-# pass both gates.
-stopifnot(all((fig4$dial != "C") == (!fig4$weak & fig4$p_hat >= TAU2)))
-stopifnot(all(fig4$d[fig4$dial != "C"] >= 0))
-stopifnot(all(is.na(fig4$ratio) == (fig4$dial == "C")))
-v4 <- fig4$dial != "C"
-stopifnot(all(fig4$dial[v4] ==
-                ifelse(fig4$sign_diff[v4] | abs(log(fig4$ratio[v4])) >= log(TAU_R),
-                       "B", "A")))
+valid4 <- dd[dd$label3 != "C", ]
+invalid4 <- dd[dd$label3 == "C", ]
+stopifnot(nrow(valid4) + nrow(invalid4) == 13L)
+invalid4$mark <- ifelse(invalid4$weak, "weak", "out")
+# study on the first line, instrument on the second, to leave room for the panels
+invalid4$name <- paste0(invalid4$study, "\n", invalid4$instrument,
+                        ifelse(invalid4$weak, " (weak)", ""))
+invalid4 <- invalid4[order(invalid4$margin), ]
+invalid4$y <- seq_len(nrow(invalid4))
+# Signed distance to the closed domain [lo, hi]: positive inside, negative
+# outside. For the five instruments that the gate rejects, the 90% set
+# CS(r*) is drawn in the same units; it must end short of D. The weak
+# instruments stop at the relevance gate, so no set is drawn for them.
+sdist <- function(x, lo, hi) ifelse(x < lo, x - lo, ifelse(x > hi, hi - x, pmin(x - lo, hi - x)))
+s_a <- ifelse(invalid4$weak, NA, sdist(invalid4$cs_lo, invalid4$D_lo, invalid4$D_hi))
+s_b <- ifelse(invalid4$weak, NA, sdist(invalid4$cs_hi, invalid4$D_lo, invalid4$D_hi))
+invalid4$s_min <- pmin(s_a, s_b); invalid4$s_max <- pmax(s_a, s_b)
+stopifnot(all(invalid4$s_max[!invalid4$weak] < 0))   # every set misses D
+# The left panels have nrow(valid4) rows and a header band of 0.8 row units
+# (labels 0.45 below the top). Scale the band here so it has the same height
+# on the page, which puts the region labels of all three panels on one line.
+nC <- nrow(invalid4); nV0 <- nrow(valid4)
+hC <- 0.8 * (nC + 0.1) / (nV0 + 0.1)
+yMaxC <- nC + 0.5 + hC; yHdC <- yMaxC - 0.45 * hC / 0.8
+# x range; D is [0, XC_HI]. XC_LO leaves room left of -1 for the whole circle
+# of is_sequel (-0.98), also when wider fonts (Windows) narrow the panel.
+XC_LO <- -1.1; XC_HI <- 0.2
+gridC <- c(-1, -0.75, -0.5, -0.25)
 
-valid4   <- fig4[fig4$dial != "C", ]
-valid4$label2 <- ifelse(valid4$sign_diff, paste0(valid4$label2, "\n(signs differ)"),
-                        valid4$label2)
-valid4$band <- ifelse(valid4$ratio >= TAU_R, "high",
-                      ifelse(valid4$ratio <= 1 / TAU_R, "low", "mid"))
-invalid4 <- fig4[fig4$dial == "C", ]
-invalid4$name <- ifelse(invalid4$weak,
-                        paste0(invalid4$label, " (weak)"), invalid4$label)
-invalid4$name <- ifelse(invalid4$rule_only,
-                        sprintf("%s (share %.2f)", invalid4$label, invalid4$p_hat),
-                        invalid4$name)
-invalid4$mark <- ifelse(invalid4$weak, "weak", ifelse(invalid4$rule_only, "rule", "out"))
-# Closest to zero at the top
-invalid4$name <- factor(invalid4$name,
-                        levels = invalid4$name[order(invalid4$d)])
-
-# ---- Left panel: Scenario C, placed by d alone ------------------------------
-pC <- ggplot(invalid4, aes(y = name)) +
-  # Shade the whole panel as Scenario C, as the right panel shades A and B.
-  # The dashed line at d = 0 still shows that Card's set contains zero.
-  annotate("rect", xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf,
+pC <- ggplot(invalid4, aes(y = y)) +
+  annotate("rect", xmin = XC_LO, xmax = 0, ymin = 0.4, ymax = yMaxC,
            fill = cC, alpha = 0.06) +
-  geom_vline(xintercept = 0, linetype = "dashed", colour = "gray50") +
-  geom_segment(aes(x = d, xend = 0, yend = name),
-               colour = cC, alpha = 0.35, linewidth = 0.7) +
-  geom_point(aes(x = d, shape = mark), colour = cC, size = 2.6, stroke = 0.9) +
-  scale_shape_manual(values = c(out = 17, weak = 2, rule = 1), guide = "none") +
-  scale_x_continuous(limits = c(-0.85, 0.12), breaks = c(-0.75, -0.5, -0.25, 0),
-                     labels = c("-0.75", "-0.50", "-0.25", "0"),
-                     expand = expansion(mult = c(0.02, 0.02))) +
-  labs(
-    title    = "C: unreliable (invalid or weak)",
-    subtitle = "F < 10 or share < 0.95; R not computed",
-    x        = expression("Signed distance " * d),
-    y        = NULL
-  ) +
+  annotate("rect", xmin = 0, xmax = XC_HI, ymin = 0.4, ymax = yMaxC,
+           fill = "gray55", alpha = 0.22) +
+  annotate("segment", x = gridC, xend = gridC, y = 0.4, yend = nC + 0.5,
+           colour = "gray85", linewidth = 0.3) +
+  annotate("segment", x = 0, xend = 0, y = 0.4, yend = nC + 0.5,
+           colour = "gray45", linetype = "dashed", linewidth = 0.4) +
+  annotate("text", x = c(XC_LO / 2, XC_HI / 2), y = yHdC, label = c("outside D", "D"),
+           colour = c(cC, "gray30"), fontface = "bold", size = c(2.8, 3.3)) +
+  geom_errorbarh(aes(xmin = s_min, xmax = s_max), colour = cC, height = 0.25,
+                 linewidth = 0.55, na.rm = TRUE) +
+  geom_point(aes(x = margin, shape = mark), colour = cC, fill = "white", size = 2.4,
+             stroke = 1) +
+  scale_shape_manual(values = c(out = 16, weak = 21), guide = "none") +
+  scale_x_continuous(limits = c(XC_LO, XC_HI), breaks = c(-1, -0.75, -0.5, -0.25, 0),
+                     labels = c("-1", "", "-0.5", "", "0"), expand = c(0, 0)) +
+  scale_y_continuous(breaks = invalid4$y, labels = invalid4$name,
+                     limits = c(0.4, yMaxC), expand = c(0, 0)) +
+  # parallel to "A and B: validity not rejected"; the two weak instruments
+  # stop at the relevance gate, before the validity gate. The subtitle uses
+  # the wording of the gate in fig:architecture, "CS(r*) meets D?"; italic()
+  # because plotmath ignores the italic face set in the theme.
+  labs(title = "C: validity rejected (or weak instrument)",
+       subtitle = expression(italic(CS(r^"*") ~ "misses" ~ D * "," ~ "or" ~ F < 10)),
+       x = expression("Signed distance to " * D), y = NULL) +
   theme_dial() +
-  theme(
-    plot.title         = element_text(face = "bold", colour = cC, size = 10),
-    plot.subtitle      = element_text(colour = "gray35", size = 7.5, face = "italic"),
-    axis.text.y        = element_text(size = 8, colour = "gray15"),
-    panel.grid.major.y = element_blank(),
-    plot.margin        = margin(4, 8, 4, 4)
-  )
+  theme(plot.title = element_text(face = "bold", colour = cC, size = 10, hjust = 0.5),
+        plot.subtitle = element_text(colour = "gray35", size = 7.5, face = "italic",
+                                     hjust = 0.5),
+        # centred over names and panel: the title is wider than this panel,
+        # which now sits at the right edge of the figure
+        plot.title.position = "plot",
+        axis.text.y = element_text(size = 8, colour = "gray15"),
+        panel.grid = element_blank(),
+        plot.margin = margin(4, 10, 4, 4))
 
-# ---- Right panel: Scenarios A and B, placed by d and R ----------------------
-pAB <- ggplot(valid4, aes(x = d, y = ratio, colour = dial)) +
-  # Scenario A: the band 1/tau_R < R < tau_R; Scenario B: outside it
-  annotate("rect", xmin = 0, xmax = Inf, ymin = 1 / TAU_R, ymax = TAU_R,
-           fill = cA, alpha = 0.08) +
-  annotate("rect", xmin = 0, xmax = Inf, ymin = TAU_R, ymax = Inf,
-           fill = cB, alpha = 0.06) +
-  annotate("rect", xmin = 0, xmax = Inf, ymin = 0, ymax = 1 / TAU_R,
-           fill = cB, alpha = 0.06) +
-  geom_hline(yintercept = c(1 / TAU_R, TAU_R), linetype = "dashed",
-             colour = "gray50", linewidth = 0.3) +
-  geom_vline(xintercept = 0, linetype = "dashed", colour = "gray50") +
-  annotate("text", x = 0.49, y = 1 / TAU_R + 0.10, hjust = 1, vjust = 0,
-           label = "A: valid, IV and DML agree",
-           colour = cA, fontface = "bold", size = 3) +
-  annotate("text", x = 0.49, y = 4.32, hjust = 1, vjust = 1,
-           label = "B: valid, IV and DML disagree",
-           colour = cB, fontface = "bold", size = 3) +
-  annotate("text", x = 0.49, y = TAU_R + 0.08, hjust = 1, vjust = 0,
-           label = "tau[R] == 1.5", parse = TRUE,
-           colour = "gray35", size = 2.6) +
-  annotate("text", x = 0.02, y = 1 / TAU_R - 0.06, hjust = 0, vjust = 1,
-           label = "1 / tau[R]", parse = TRUE,
-           colour = "gray35", size = 2.6) +
-  geom_point(aes(shape = ifelse(sign_diff, "sign", "same")), size = 2.8, stroke = 1) +
-  scale_shape_manual(values = c(same = 16, sign = 1), guide = "none") +
-  # Labels stay in their own band
-  # The A band is narrow: put the label right beside its point
-  geom_text(
-    data = valid4[valid4$band == "mid", ], aes(x = d + 0.025, label = label2),
-    hjust = 0, size = 2.5, fontface = "bold", lineheight = 0.85,
-    show.legend = FALSE
-  ) +
-  geom_text_repel(
-    data = valid4[valid4$band == "low", ], aes(label = label2),
-    size = 2.5, fontface = "bold", lineheight = 0.85,
-    box.padding = 0.4, point.padding = 0.3, force = 3,
-    min.segment.length = 0.1, segment.color = "gray60", segment.size = 0.3,
-    xlim = c(0.03, 0.36), ylim = c(0.02, 1 / TAU_R - 0.05),
-    max.overlaps = Inf, seed = 17
-  ) +
-  geom_text_repel(
-    data = valid4[valid4$band == "high", ], aes(label = label2),
-    size = 2.5, fontface = "bold", lineheight = 0.85,
-    box.padding = 0.5, point.padding = 0.35, force = 3,
-    min.segment.length = 0.1, segment.color = "gray60", segment.size = 0.3,
-    # Labels end left of x = 0.43, so the long Di Tella label clears its
-    # point at d = 0.454
-    xlim = c(0.03, 0.43), ylim = c(TAU_R + 0.3, 4.0),
-    max.overlaps = Inf, seed = 17
-  ) +
-  scale_colour_manual(values = c("A" = cA, "B" = cB), guide = "none") +
-  scale_x_continuous(limits = c(0, 0.5), breaks = c(0, 0.1, 0.2, 0.3, 0.4, 0.5),
-                     labels = c("0", "0.1", "0.2", "0.3", "0.4", "0.5"),
-                     expand = expansion(mult = c(0, 0.01))) +
-  scale_y_continuous(limits = c(0, 4.4), breaks = 0:4,
-                     expand = expansion(mult = c(0, 0))) +
-  labs(
-    title    = "A and B: valid",
-    # The subtitles state the gates of Algorithm 1 (relevance, then the
-    # bootstrap rule); d is only the x-axis. The \u2265 escape keeps this file ASCII.
-    subtitle = "F \u2265 10 and share \u2265 0.95; R computed",
-    x        = expression("Signed distance " * d),
-    y        = expression("|" * hat(beta)[IV] / hat(beta)[DML] * "|")
-  ) +
-  theme_dial() +
-  theme(
-    plot.title    = element_text(face = "bold", colour = "gray20", size = 10),
-    plot.subtitle = element_text(colour = "gray35", size = 7.5, face = "italic"),
-    plot.margin   = margin(4, 6, 4, 8)
-  )
+# Left and middle panels: one row per instrument that passes, sorted by the
+# share of the bootstrap resamples that land in B, the quantity that sets the
+# label. Left: R with its 95% bootstrap interval; the green band is
+# Scenario A (1/TAU_R < R < TAU_R) and the blue regions on either side are
+# Scenario B. A resample lands in B when its R falls in a blue region or its
+# IV and DML estimates differ in sign. Middle: that share against the label
+# rule of Algorithm 1 (A when at most 1 - TAU_L of the resamples land in B,
+# B when at least TAU_L do, inconclusive otherwise). The label thus depends
+# on the whole bootstrap distribution of R, not on where the point estimate
+# lies, so the left panel draws the points in grey. Open circle: IV and DML
+# of opposite sign (num_genres); R uses absolute values, so the middle panel
+# adds the note "signs differ" under its share. Grid lines stop below the
+# header row, so they do not cross its labels.
+valid4 <- valid4[order(valid4$share_B, valid4$R), ]   # largest share at the top
+valid4$y <- seq_len(nrow(valid4))
+valid4$name <- paste0(valid4$study, "\n", valid4$instrument)
+valid4$share_pct <- 100 * valid4$share_B
+# shares are multiples of 0.5% (200 resamples): show them exactly, e.g. 2.5% and 99.5%
+valid4$share_txt <- paste0(formatC(valid4$share_pct, format = "f", digits = 1,
+                                   drop0trailing = TRUE), "%")
+valid4$lab_f <- factor(valid4$label3, levels = c("A", "B", "inconclusive"))
+nV    <- nrow(valid4)
+yHd   <- nV + 0.85           # header row with the region labels
+yMax  <- nV + 1.3
+X_LO  <- 0.04; X_HI <- 30    # x range of R (log scale)
+gridR <- c(0.1, 0.5, 1, 2, 5, 20)
+cGrid <- "gray85"
+th_side <- theme(plot.title = element_text(face = "bold", colour = "gray20", size = 10,
+                                           hjust = 0.5),
+                 plot.subtitle = element_text(colour = "gray35", size = 7.5, face = "italic",
+                                              hjust = 0.5),
+                 plot.title.position = "panel",
+                 panel.grid = element_blank())
 
-p4 <- (pC | pAB) +
-  plot_layout(widths = c(1, 1)) +
+pAB <- ggplot(valid4, aes(y = y)) +
+  annotate("rect", xmin = X_LO, xmax = 1 / TAU_R, ymin = 0.4, ymax = yMax,
+           fill = cB, alpha = 0.08) +
+  annotate("rect", xmin = 1 / TAU_R, xmax = TAU_R, ymin = 0.4, ymax = yMax,
+           fill = cA, alpha = 0.16) +
+  annotate("rect", xmin = TAU_R, xmax = X_HI, ymin = 0.4, ymax = yMax,
+           fill = cB, alpha = 0.08) +
+  annotate("segment", x = gridR, xend = gridR, y = 0.4, yend = nV + 0.5,
+           colour = cGrid, linewidth = 0.3) +
+  annotate("text", x = c(sqrt(X_LO / TAU_R), 1, sqrt(TAU_R * X_HI)), y = yHd,
+           label = c("B", "A", "B"), colour = c(cB, cA, cB), fontface = "bold", size = 3.3) +
+  geom_errorbarh(aes(xmin = R_lo, xmax = R_hi), height = 0.25, linewidth = 0.55,
+                 colour = "gray35") +
+  geom_point(aes(x = R, shape = sign_diff), size = 2.4, stroke = 1, colour = "gray15",
+             fill = "white") +
+  scale_shape_manual(values = c(`FALSE` = 16, `TRUE` = 21), guide = "none") +
+  scale_x_log10(limits = c(X_LO, X_HI), breaks = gridR,
+                labels = c("0.1", "0.5", "1", "2", "5", "20"), expand = c(0, 0)) +
+  scale_y_continuous(breaks = valid4$y, labels = valid4$name,
+                     limits = c(0.4, yMax), expand = c(0, 0)) +
+  labs(title = "A and B: validity not rejected",
+       subtitle = "R with its 95% bootstrap interval (log scale)",
+       x = expression("R = |" * hat(beta)[IV] / hat(beta)[DML] * "|"), y = NULL) +
+  theme_dial() + th_side +
+  theme(axis.text.y = element_text(size = 8, colour = "gray15"),
+        plot.margin = margin(4, 4, 4, 8))
+
+S_LO <- 100 * (1 - TAU_L); S_HI <- 100 * TAU_L   # 10% and 90%
+valid4$s_tx <- ifelse(valid4$share_pct > 50, valid4$share_pct - 5, valid4$share_pct + 5)
+valid4$s_hj <- ifelse(valid4$share_pct > 50, 1, 0)
+pS <- ggplot(valid4, aes(y = y)) +
+  annotate("rect", xmin = 0, xmax = S_LO, ymin = 0.4, ymax = yMax,
+           fill = cA, alpha = 0.16) +
+  annotate("rect", xmin = S_LO, xmax = S_HI, ymin = 0.4, ymax = yMax,
+           fill = cI, alpha = 0.12) +
+  annotate("rect", xmin = S_HI, xmax = 100, ymin = 0.4, ymax = yMax,
+           fill = cB, alpha = 0.10) +
+  annotate("segment", x = 50, xend = 50, y = 0.4, yend = nV + 0.5,
+           colour = cGrid, linewidth = 0.3) +
+  annotate("text", x = c(S_LO / 2, 50, (S_HI + 100) / 2), y = yHd,
+           label = c("A", "inconclusive", "B"), colour = c(cA, cI, cB),
+           fontface = c("bold", "bold.italic", "bold"), size = c(3.3, 2.5, 3.3)) +
+  geom_point(aes(x = share_pct, colour = lab_f, shape = sign_diff), size = 2.4,
+             stroke = 1, fill = "white") +
+  geom_text(aes(x = s_tx, label = share_txt, hjust = s_hj), size = 2.5,
+            colour = "gray20") +
+  geom_text(data = valid4[valid4$sign_diff, ],
+            aes(x = s_tx, y = y - 0.3, hjust = s_hj), label = "signs differ",
+            size = 2.3, fontface = "italic", colour = "gray35") +
+  scale_colour_manual(values = c(A = cA, B = cB, inconclusive = cI), guide = "none") +
+  scale_shape_manual(values = c(`FALSE` = 16, `TRUE` = 21), guide = "none") +
+  scale_x_continuous(limits = c(0, 100), breaks = c(S_LO, 50, S_HI),
+                     labels = paste0(c(S_LO, 50, S_HI), "%"), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(0.4, yMax), expand = c(0, 0)) +
+  coord_cartesian(clip = "off") +
+  labs(title = "Agreement label", subtitle = "share of resamples in B",
+       x = "% of 200 resamples", y = NULL) +
+  theme_dial() + th_side +
+  theme(axis.text.y = element_blank(), plot.margin = margin(4, 18, 4, 6))
+
+p4 <- (pAB | pS | pC) +
+  plot_layout(widths = c(1.45, 0.95, 1)) +
   plot_annotation(
-    title    = "DIAL Diagnostic Space: 13 Instruments Across 8 Studies",
-    subtitle = "5 of 13 pass both gates under the canonical domain D",
-    theme    = theme(
-      plot.title    = element_text(face = "bold", size = 12),
-      plot.subtitle = element_text(colour = "gray30", size = 9)
-    )
-  )
+    title = "DIAL diagnostic space: 13 instruments across 8 studies",
+    theme = theme(plot.title = element_text(face = "bold", size = 12,
+                                            margin = margin(0, 0, 6, 0))))
 
 ggsave(file.path(FIG_DIR, "fig4_diagnostic_space.png"), p4,
-       width = 6.8, height = 3.8, dpi = 300, bg = "white")
+       width = 7.4, height = 4.0, dpi = 300, bg = "white")
 cat("Saved: fig4_diagnostic_space.png\n")
 
 cat("\nAll figures saved to", FIG_DIR, "\n")

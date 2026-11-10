@@ -1,5 +1,5 @@
 # ==============================================================================
-# bootstrap_rule.R  --  DIAL bootstrap validity rule (Proposition 2, tau_V)
+# bootstrap_rule.R  --  the MCUB-share rule (app:mc, rem:mcub_margin; tau_V)
 # ------------------------------------------------------------------------------
 # WHAT IT DOES
 #   For an instrument with analysis data (outcome Y, treatment X, instrument
@@ -7,8 +7,10 @@
 #   each resample b it redoes the residualise-and-project step, computes a
 #   new MCUB set C^b and records
 #       I_b = 1{ 0 in C^b }        (zero within +/- zero_tol of the set)
-#   The bootstrap validity fraction is p_hat_B = mean(I_b). DIAL calls the
-#   instrument Valid when p_hat_B >= tau_V (default 0.95), else Invalid.
+#   The bootstrap validity fraction is p_hat_B = mean(I_b). The MCUB-share
+#   rule calls the instrument Valid when p_hat_B >= tau_V (default 0.95),
+#   else Invalid. The validity gate of Algorithm 1 is a different test
+#   (rstar_gate.R); it uses the preparation step of this file.
 #   (The code calls this threshold tau2: option dial.tau2, column Valid_tau2.)
 #
 #   Each resample repeats the whole MCUB computation: its own correlations,

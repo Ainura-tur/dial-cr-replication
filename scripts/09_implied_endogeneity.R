@@ -15,7 +15,7 @@
 #           effects were homogeneous. Reported with a 95% percentile
 #           interval from B_RSTAR bootstrap resamples of the raw rows (the
 #           residualise-and-project step is redone on every resample).
-#   For the five instruments that pass the validity gate (tab:empirical_full):
+#   For the six instruments that pass both gates (tab:empirical_full):
 #     b_IV, b_DML, R = |b_IV| / |b_DML|, the sign check, and a 95%
 #     percentile interval for R from B_R bootstrap resamples. IV and DML
 #     are refitted on each resample. DML folds are assigned to the
@@ -28,8 +28,9 @@
 #   sample split; bootstrap refits use 1. Each instrument has its own seed,
 #   so the estimates do not depend on the order of the runs. MovieLens
 #   uses seed 43, the seed of 03_phase2_empirical.R, which reproduces its
-#   estimate. The paper reports these seeded values: R = 3.13, 1.37, 2.44
-#   and 1.84 for the two Di Tella instruments, Galiani and Banerjee.
+#   estimate. The paper reports these seeded values: R = 3.13, 1.37, 0.62,
+#   2.44, 1.17 and 1.84 for judgeAlreadyUsedEM, percJudgeSentToEM,
+#   num_genres, highnumber, fatheduc and instru.
 #
 # DATA
 #   Phase 1 .dta files are read from data/ at the repository root through
@@ -44,15 +45,17 @@
 # RUNTIME  about 20 minutes on 7 cores (the DML refits); r* alone takes
 #   seconds (set B_R <- 0L to skip the intervals for R).
 #
-# RUN (from the scripts folder)
+# RUN (from any folder; 11 needs this output, so run 09 first)
 #   Rscript 09_implied_endogeneity.R
+# or through run_all.R, which checks the setup first: Rscript run_all.R 09 11
+# Set DIAL_REQUIRE_DOUBLEML=1 to stop instead of using the DML fallback.
 # ==============================================================================
 
 rm(list = ls())
 
 install_if_missing <- function(pkgs) {
   new <- pkgs[!(pkgs %in% installed.packages()[, "Package"])]
-  if (length(new)) install.packages(new, repos = "https://cloud.r-project.org/")
+  if (length(new)) try(install.packages(new, repos = "https://cloud.r-project.org/"))
 }
 install_if_missing(c("dplyr", "haven", "Matrix", "MASS", "data.table",
                      "DoubleML", "mlr3", "mlr3learners", "ranger",
@@ -75,16 +78,17 @@ lag       <- dplyr::lag
 # SETTINGS
 # ==============================================================================
 
-# Folder with u.data and u.item; without it, 03's reader downloads
-# MovieLens 100K from GroupLens
-ML_DIR     <- if (dir.exists("ml-100k")) "ml-100k" else NULL
-NHANES_CSV <- "nhanes_mercury.csv"   # written by 01_nhanes_build.R
+# MovieLens (ml-100k/) and NHANES (nhanes_mercury.csv) are found by
+# dial_specs.R; see its header, or set DIAL_ML_DIR and DIAL_NHANES_CSV.
 B_RSTAR    <- 2000L                  # bootstrap resamples for r*
 B_R        <- 200L                   # bootstrap resamples for R (DML refits)
 N_FOLDS    <- 5L
 N_TREES    <- 500L
 TAU_R      <- 1.5
-N_WORKERS  <- min(7L, max(1L, parallel::detectCores(logical = FALSE) - 1L))
+# Parallel workers for the bootstrap of R (multisession: works on Windows
+# too). Override with the environment variable DIAL_WORKERS.
+N_WORKERS  <- as.integer(Sys.getenv("DIAL_WORKERS",
+                min(7L, max(1L, parallel::detectCores(logical = FALSE) - 1L))))
 
 # ==============================================================================
 # PATHS AND FOUNDATION
@@ -144,7 +148,17 @@ iv_ols_F <- function(d, Y, X, Z, controls) {
 
 # DML (partially linear model). With 'folds' (one fold number per row), the
 # cross-fitting uses that split; otherwise DoubleML draws n_rep splits.
-# Defined only if absent, so a test harness can supply its own.
+# Defined only if absent, so a test harness can supply its own. Without
+# DoubleML, foundation/dml_fallback.R supplies the same estimator.
+source(file.path(FOUNDATION_DIR, "dml_fallback.R"))
+DML_ENGINE <- dial_dml_engine_report()     # stops here if DIAL_REQUIRE_DOUBLEML=1
+                                           # and DoubleML does not load
+if (!exists("dml_plr", mode = "function") && DML_ENGINE != "DoubleML") {
+  dml_plr <- function(d, Y, X, controls, folds = NULL, n_rep = 1L,
+                      num.trees = N_TREES)
+    dial_dml_plr_rf(d, Y, X, controls, folds = folds, n_rep = n_rep,
+                    n_folds = N_FOLDS, num.trees = num.trees)$coef
+}
 if (!exists("dml_plr", mode = "function")) {
   dml_plr <- function(d, Y, X, controls, folds = NULL, n_rep = 1L,
                       num.trees = N_TREES) {
@@ -193,115 +207,19 @@ boot_ratio <- function(d, Y, X, Z, controls, B, seed) {
     oplan <- future::plan(future::multisession, workers = N_WORKERS)
     on.exit(future::plan(oplan), add = TRUE)
     future.apply::future_lapply(seq_len(B), one, future.seed = TRUE,
-      future.packages = c("DoubleML", "mlr3", "mlr3learners", "data.table"))
+      future.packages = if (dial_dml_available())
+        c("DoubleML", "mlr3", "mlr3learners", "data.table") else "ranger")
   } else lapply(seq_len(B), one)
   do.call(rbind, out)
 }
 
 # ==============================================================================
-# DATA
+# DATA: the 13 instruments, shared with 11_diagnostics.R and 12_rstar_gate.R
 # ==============================================================================
 
-unlabel <- function(d) {
-  d <- as.data.frame(d)
-  for (v in names(d))
-    if (inherits(d[[v]], "haven_labelled")) d[[v]] <- as.vector(unclass(d[[v]]))
-  d
-}
-read_data <- function(file) unlabel(haven::read_dta(dial_data_path(file)))
-
-loaders <- list(
-  ditella = function() {
-    d <- read_data("Di_Tella_Schargrodsky_2013.dta")
-    d[which(d$offendersPerJudge > 9), , drop = FALSE]
-  },
-  galiani = function() {
-    d <- read_data("Crime.dta")
-    d[which(d$cohort > 1957 & d$cohort < 1963), , drop = FALSE]
-  },
-  banerjee = function() {
-    d <- read_data("yld_sett_aug03.dta")
-    d[which(d$year >= 1965 & d$phwht <= 1), , drop = FALSE]
-  },
-  burde = function() read_data("afgan.dta"),
-  movielens = function() {
-    if (!exists(".load_ml100k", mode = "function"))
-      stop("03_phase2_empirical.R not found next to this script")
-    ml <- .load_ml100k(ML_DIR)
-    user_ctrl <- ml$ratings %>% group_by(user_id) %>%
-      summarise(user_mean_rating = mean(rating), .groups = "drop")
-    movies <- ml$ratings %>% left_join(user_ctrl, by = "user_id") %>%
-      group_by(movie_id) %>%
-      summarise(mean_rating = mean(rating), n_ratings = n(),
-                audience_leniency = mean(user_mean_rating), .groups = "drop") %>%
-      mutate(log_pop = log(1 + n_ratings)) %>%
-      left_join(ml$items[, c("movie_id", "num_genres", "release_year", "is_sequel")],
-                by = "movie_id") %>%
-      as.data.frame()
-    movies$release_year_c <- movies$release_year -
-      stats::median(movies$release_year, na.rm = TRUE)
-    movies
-  },
-  papke = function() as.data.frame(wooldridge::k401k),
-  nhanes = function() {
-    f <- if (file.exists(NHANES_CSV)) NHANES_CSV else file.path(.script_dir, NHANES_CSV)
-    if (!file.exists(f)) stop("nhanes_mercury.csv not found; run 01_nhanes_build.R")
-    utils::read.csv(f, stringsAsFactors = FALSE)
-  },
-  card = function() as.data.frame(wooldridge::card)
-)
-
-C_DT <- c("mostSeriousCrime", "age", "ageSquared", "argentine",
-          "numberPreviousImprisonments", "judicialDistrict", "yearOfImprisonment")
-C_BU <- c("headchild", "age", "yrsvill", "farsi", "tajik", "farmers", "agehead",
-          "educhead", "nhh", "land", "sheep", "distschool", "chagcharan")
-C_BA <- c("alt", "totrain", "so_black", "so_red", "so_all", "lat", "coastal",
-          "brule1", "year")
-
-# valid = passes the validity gate in tab:empirical_full; seed = DML seed
-SPECS <- list(
-  list(study = "Di Tella", instrument = "judgeAlreadyUsedEM", data = "ditella",
-       Y = "recidivism", X = "electronicMonitoring", Z = "judgeAlreadyUsedEM",
-       controls = C_DT, D = c(0.15, 0.25), valid = TRUE, seed = 1101L),
-  list(study = "Di Tella", instrument = "percJudgeSentToEM", data = "ditella",
-       Y = "recidivism", X = "electronicMonitoring", Z = "percJudgeSentToEM",
-       controls = C_DT, D = c(0, 0.25), valid = TRUE, seed = 1102L),
-  list(study = "MovieLens", instrument = "num_genres", data = "movielens",
-       Y = "mean_rating", X = "log_pop", Z = "num_genres",
-       controls = "audience_leniency", D = c(0, 0.8), valid = TRUE, seed = 43L),
-  list(study = "MovieLens", instrument = "release_year", data = "movielens",
-       Y = "mean_rating", X = "log_pop", Z = "release_year_c",
-       controls = "audience_leniency", D = c(-0.8, 0), valid = FALSE, seed = 44L),
-  list(study = "MovieLens", instrument = "is_sequel", data = "movielens",
-       Y = "mean_rating", X = "log_pop", Z = "is_sequel",
-       controls = "audience_leniency", D = c(-0.8, 0), valid = FALSE, seed = 45L),
-  list(study = "Galiani", instrument = "highnumber", data = "galiani",
-       Y = "crimerate", X = "sm", Z = "highnumber",
-       controls = c("cohort", "draftnumber", "navy"), D = c(-0.2, 0),
-       valid = TRUE, seed = 1103L),
-  list(study = "Papke", instrument = "sole_plan", data = "papke",
-       Y = "prate", X = "mrate", Z = "sole", controls = "ltotemp",
-       D = c(0, 0.3), valid = FALSE, seed = 1104L),
-  list(study = "Papke", instrument = "plan_age", data = "papke",
-       Y = "prate", X = "mrate", Z = "age", controls = "ltotemp",
-       D = c(0, 0.3), valid = FALSE, seed = 1105L),
-  list(study = "NHANES", instrument = "income", data = "nhanes",
-       Y = "log_mercury", X = "fish_freq", Z = "income",
-       controls = c("age", "female", "bmi"), D = c(0, 0.8), valid = FALSE, seed = 1106L),
-  list(study = "NHANES", instrument = "education", data = "nhanes",
-       Y = "log_mercury", X = "fish_freq", Z = "education",
-       controls = c("age", "female", "bmi"), D = c(0, 0.8), valid = FALSE, seed = 1107L),
-  list(study = "Card", instrument = "fatheduc", data = "card",
-       Y = "lwage", X = "educ", Z = "fatheduc",
-       controls = c("exper", "expersq", "black", "smsa", "south"),
-       D = c(0, 0.4), valid = FALSE, seed = 1108L),
-  list(study = "Burde", instrument = "buildschool", data = "burde",
-       Y = "testscore", X = "enrolled", Z = "buildschool", controls = C_BU,
-       D = c(0, 0.4), valid = FALSE, seed = 1109L),
-  list(study = "Banerjee", instrument = "instru", data = "banerjee",
-       Y = "phwht", X = "p_nland", Z = "instru", controls = C_BA,
-       D = c(-0.6, -0.4), valid = TRUE, seed = 1110L)
-)
+source(file.path(.script_dir, "dial_specs.R"))
+loaders <- LOADERS
+dial_data_report()
 
 # ==============================================================================
 # MAIN LOOP
@@ -310,13 +228,19 @@ SPECS <- list(
 cat("================================================================================\n")
 cat("Implied endogeneity r* and bootstrap intervals for R (09_implied_endogeneity.R)\n")
 cat("================================================================================\n")
-cat(sprintf("  B_RSTAR = %d, B_R = %d, workers = %d\n\n", B_RSTAR, B_R, N_WORKERS))
+cat(sprintf("  B_RSTAR = %d, B_R = %d, workers = %d, DML engine = %s\n\n",
+            B_RSTAR, B_R, N_WORKERS, DML_ENGINE))
 
 data_cache <- list()
 rows <- list()
 t0 <- Sys.time()
 
+# DIAL_ONLY=card,fatheduc runs only the named instruments (study or
+# instrument names, case-insensitive) and merges them into the existing CSV.
+.only <- tolower(trimws(strsplit(Sys.getenv("DIAL_ONLY", ""), ",")[[1]]))
+.only <- .only[nzchar(.only)]
 for (s in SPECS) {
+  if (length(.only) && !(tolower(s$instrument) %in% .only || tolower(s$study) %in% .only)) next
   cat(sprintf("--- %s %s (D = (%.2f, %.2f)) ---\n", s$study, s$instrument, s$D[1], s$D[2]))
   d_all <- data_cache[[s$data]]
   if (is.null(d_all)) {
@@ -353,7 +277,7 @@ for (s in SPECS) {
                     r_in_D = r_star >= s$D[1] & r_star <= s$D[2],
                     b_DML = NA_real_, R = NA_real_, R_lo = NA_real_, R_hi = NA_real_,
                     share_B = NA_real_, share_sign = NA_real_, n_boot = NA_integer_,
-                    stringsAsFactors = FALSE)
+                    dml_engine = DML_ENGINE, stringsAsFactors = FALSE)
   cat(sprintf("    n = %d  F = %.1f  b_IV = %.4f  b_OLS = %.4f  r* = %+.3f [%+.3f, %+.3f] (check %+.3f)  r* in D: %s\n",
               out$n, out$F_first, out$b_IV, out$b_OLS, r_star, r_ci[1], r_ci[2],
               r_chk, out$r_in_D))
@@ -385,7 +309,16 @@ for (s in SPECS) {
 }
 
 res <- do.call(rbind, rows)
-utils::write.csv(res, file.path(RESULTS_DIR, "implied_endogeneity.csv"), row.names = FALSE)
+.csv <- file.path(RESULTS_DIR, "implied_endogeneity.csv")
+if (length(.only) && file.exists(.csv)) {          # merge into the earlier run
+  old <- utils::read.csv(.csv, stringsAsFactors = FALSE)
+  old <- old[!(old$instrument %in% res$instrument), , drop = FALSE]
+  if (!"dml_engine" %in% names(old)) old$dml_engine <- rep(NA_character_, nrow(old))
+  res <- rbind(old[, names(res)], res)
+  ord <- vapply(SPECS, `[[`, "", "instrument")
+  res <- res[order(match(res$instrument, ord)), ]
+}
+utils::write.csv(res, .csv, row.names = FALSE)
 
 cat("\n================================================================================\n")
 cat("SUMMARY\n")
