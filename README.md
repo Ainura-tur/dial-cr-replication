@@ -31,7 +31,7 @@ writes each step's log to `results/logs/`, and stops at the first step that
 fails. It can also run part of the pipeline:
 
 ```sh
-Rscript run_all.R            # steps 12, 09, 11, 06, 13 and 08; needs the outputs of 01-04
+Rscript run_all.R            # steps 12, 09, 11, 06, 13, 14 and 08; needs the outputs of 01-04
 Rscript run_all.R 12 13 08   # only these steps, in the order the pipeline needs
 Rscript run_all.R dry        # check the setup and list the steps; run nothing
 ```
@@ -50,12 +50,17 @@ folder, and source the file. Every script also runs on its own with
 | `02_phase1_empirical.R` | Table 3 (`tab:empirical_full`), MCUB sets: Di Tella, Galiani, Banerjee, Burde | `scripts/phase1_results.csv` | about 2 hours for 02 and 03 together |
 | `03_phase2_empirical.R` | Table 3, MCUB sets: MovieLens, Papke, NHANES, Card | `scripts/phase2_results.csv` | (see 02) |
 | `04_synthetic_benchmark.R` | Table 1 (`tab:synthetic`), MCUB sets and HSIC | `scripts/table1_results.csv` | about 45 minutes |
-| `06_structural_simulation.R` | Table 8 (`tab:sim`), estimates and MCUB sets | `results/sim_dial_v7_results.rds`, `results/coef_vectors.rds` | about 40 minutes |
-| `08_figures.R` | Figures 1 to 4 | `scripts/paper/figures/fig1_dial_architecture.png`, `fig2_gate_power.png`, `fig3_rstar_domain.png`, `fig4_diagnostic_space.png` | under 2 minutes |
+| `06_structural_simulation.R` | Table 9 (`tab:sim`), estimates and MCUB sets | `results/sim_dial_v7_results.rds`, `results/coef_vectors.rds` | about 40 minutes |
+| `08_figures.R` | Figures 1 to 4 (see the note on file names below) | `scripts/paper/figures/fig1_dial_architecture.png`, `fig2_gate_power.png`, `fig3_rstar_domain.png`, `fig4_diagnostic_space.png` | under 2 minutes |
 | `09_implied_endogeneity.R` | Table 4 (`tab:locality`): r*, R, its interval and the B share | `results/implied_endogeneity.csv` | about 20 minutes |
 | `11_diagnostics.R` | the Di Tella IV difference (Section 5.3), the spread of R across sample splits (Appendix B.2), the scale m (Appendix G) | `results/diagnostics.csv`, `results/ditella_late_diff.csv`, `results/dml_split_variation.csv` | about 20 minutes |
-| `12_rstar_gate.R` | Table 3, gate columns (F, r*, CS_n, V, p_D); Table 6 (`tab:frontier_emp`); data for Figures 3 and 4 | `results/rstar_gate.csv` | under a minute |
-| `13_rstar_gate_mc.R` | Table 7 (`tab:gate_mc`, part A); data for Figure 2 (part B); gate columns of Tables 1 and 8 (parts C and D) | `results/rstar_gate_mc_cells.csv`, `rstar_gate_power.csv`, `rstar_gate_synthetic.csv`, `rstar_gate_sim.csv` | about 40 minutes on 2 cores; about 70 minutes on Windows, which runs it on one core |
+| `12_rstar_gate.R` | Table 3, gate columns (F, r*, CS_n, V, p_D); Table 6 (`tab:frontier_emp`); data for Figures 2 and 4 | `results/rstar_gate.csv` | under a minute |
+| `13_rstar_gate_mc.R` | Table 7 (`tab:gate_mc`, part A); data for Figure 3 (part B); gate columns of Tables 1 and 9 (parts C and D) | `results/rstar_gate_mc_cells.csv`, `rstar_gate_power.csv`, `rstar_gate_synthetic.csv`, `rstar_gate_sim.csv` | about 40 minutes on 2 cores; about 70 minutes on Windows, which runs it on one core |
+| `14_hsic_rejection_mc.R` | Table 8 (`tab:hsic_mc`): rejection rates of the gate and HSIC over 500 samples per instrument, also quoted in Section 5.1 | `results/hsic_rejection_mc.csv` | about 12 minutes on 2 cores; about 17 minutes on Windows, which runs it on one core |
+
+The figure files keep their earlier names: `fig2_gate_power.png` holds
+Figure 3 (`fig:power_curves`), and `fig3_rstar_domain.png` holds Figure 2
+(`fig:rstar`).
 
 Table 2 (`tab:denotation`) lists notation. Table 5 (`tab:frontier`) comes
 from a closed-form expression; [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md)
@@ -84,25 +89,26 @@ the paper uses their output, so `run_all.R` runs them only when asked
 These three scripts, and the comments in 02 to 06, call this rule the
 "bootstrap validity rule" or the "tau_V rule", and their output names
 their own tables (`tab:mc`, `tab:rule_mc`). The DIAL column that 04 and 06
-print also uses this rule; the gate verdicts of Tables 1 and 8 come from
+print also uses this rule; the gate verdicts of Tables 1 and 9 come from
 13. The MCUB sets of 02, 03, 04 and 06 are the ones the paper reports.
 
 ## Results in this repository
 
 `results/` holds the outputs behind the paper: the gate (12 and 13), the
 implied endogeneity and the ratio R (09) and the diagnostics (11), from a
-run with DoubleML on 9 November 2026, plus the outputs of 05, 07 and 10.
+run with DoubleML on 9 November 2026; the HSIC Monte Carlo (14); and the
+outputs of 05, 07 and 10.
 `scripts/` holds the MCUB sets of 02 and 03 and the table of 04, and
 `scripts/paper/figures/` the four figures. With these files,
 `Rscript run_all.R 08` redraws every figure in under two minutes. The
 structural simulation's `results/sim_dial_v7_results.rds` is not included;
-06 prints the rows of Table 8.
+06 prints the rows of Table 9.
 
 ## Folder layout
 
 ```
 dial-cr-replication/
-├── scripts/      numbered scripts 00-13, dial_specs.R and run_all.R; 08 writes the figures to scripts/paper/figures/
+├── scripts/      numbered scripts 00-14, dial_specs.R and run_all.R; 08 writes the figures to scripts/paper/figures/
 ├── foundation/   shared code: CR test and MCUB sets, MCUB-share rule, validity gate, DML fallback, Jones-Pewsey DGP
 ├── data/         the four .dta files of the Phase 1 applications
 ├── results/      outputs; caches and logs are created here and ignored by git

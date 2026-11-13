@@ -33,7 +33,7 @@ An earlier copy of the MCUB functions, plus a simulation framework
 (`generate_data()`, `analyze_single_sample()`, `monte_carlo_simulation()`,
 `summarize_sim_results()`). Scripts 02 and 03 source it before
 `Fin_Empirical5_clean.R`, whose definitions then take precedence. Scripts
-04 to 13 do not use it. Its top-level code draws a small example sample
+04 to 14 do not use it. Its top-level code draws a small example sample
 (it sets `N = 800`), so scripts 04 and 05 avoid sourcing it.
 
 ### `bootstrap_rule.R`
@@ -45,7 +45,7 @@ comments of scripts 02 to 06 and 10 call it the bootstrap validity rule.
 The file also provides the raw-data bootstrap of the correlation
 covariance (`dial_cov_corr_boot_raw()`) and the preparation step
 (`dial_raw_spec()`, `dial_prep_engine()`, `dial_prep_rho()`), which the
-validity gate and scripts 09 to 13 use. It caches each rule call in
+validity gate and scripts 09 to 14 use. It caches each rule call in
 `results/boot_rule/`. The header lists its options (`dial.boot_rule`,
 `dial.boot_B`, `dial.tau2`, `dial.zero_tol`, `dial.boot_mcub`, and
 others).
@@ -60,7 +60,7 @@ CS_n, the verdict V, the p-value p_D, the nearest edge, kappa, s(e) and
 the Gaussian power prediction; `dial_rstar_gate_data()` does the same from
 a data frame. `dial_kappa_star()` gives the frontier. Needs
 `dial_raw_spec()` and `dial_prep_engine()` from `bootstrap_rule.R`. Used
-by scripts 12 and 13.
+by scripts 12, 13 and 14.
 
 ### `dml_fallback.R`
 
@@ -75,7 +75,7 @@ scripts 06, 09 and 11; the reported estimates come from DoubleML.
 
 The Jones-Pewsey data-generating process of Appendix `app:dgp_jp`:
 `draw_jp_sample()`, `calibrate_lambda()` and the instrument grid
-`JP_INSTRUMENT_GRID`. Used by scripts 04, 05, 10 and 13.
+`JP_INSTRUMENT_GRID`. Used by scripts 04, 05, 10, 13 and 14.
 
 ## Source order
 

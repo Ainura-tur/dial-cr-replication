@@ -110,10 +110,10 @@ for (.f in c("Fin_sim3_clean.R", "Fin_Empirical5_clean.R")) {
 rm(.f, .path)
 
 # ---- 4. The other foundation files ------------------------------------------
-# jp_dgp.R: the Jones-Pewsey DGP, used by 04, 05, 10 and 13.
+# jp_dgp.R: the Jones-Pewsey DGP, used by 04, 05, 10, 13 and 14.
 # bootstrap_rule.R: the MCUB-share rule (tau_V) and the preparation step,
-#   used by 02 to 06 and 09 to 13.
-# rstar_gate.R: the validity gate of Algorithm 1, used by 12 and 13.
+#   used by 02 to 06 and 09 to 14.
+# rstar_gate.R: the validity gate of Algorithm 1, used by 12, 13 and 14.
 # dml_fallback.R: DoubleML's estimator for machines without DoubleML,
 #   used by 06, 09 and 11.
 
