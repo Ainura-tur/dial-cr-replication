@@ -14,7 +14,7 @@
 # STEPS
 #   PRESET chooses the steps; STEPS overrides it with a list of step numbers.
 #   The steps always run in the order of ORDER below (01, 02, 03, 04, 12, 09,
-#   11, 06, 13, 05, 07, 10, 08), whatever order STEPS lists them in.
+#   11, 06, 13, 14, 05, 07, 10, 08), whatever order STEPS lists them in.
 #     "rerun" (default): the steps that use the validity gate or DoubleML.
 #       They read the outputs of 01-04, which must already exist.
 #         12  validity gate for the 13 instruments     under a minute
@@ -22,6 +22,7 @@
 #         11  diagnostics and labels (DoubleML)        about 20 minutes
 #         06  structural simulation, rows SIM_ROWS     about 30 minutes
 #         13  Monte Carlo of the gate                  about 1-1.5 hours
+#         14  HSIC and the gate over repeated samples  about 12-17 minutes
 #         08  Figures 1-4                              under 2 minutes
 #     "paper": every script behind the paper, from the start: 01, 02, 03 and
 #       04, then the steps above, with all seven rows of 06. About 6-7 hours.
@@ -81,12 +82,12 @@ DRY_RUN    <- FALSE           # TRUE: check the setup and list the steps only
 # STEP TABLE
 # ==============================================================================
 
-ORDER   <- c("01", "02", "03", "04", "12", "09", "11", "06", "13", "05", "07", "10", "08")
-PRESETS <- list(rerun = c("12", "09", "11", "06", "13", "08"),
-                paper = c("01", "02", "03", "04", "06", "09", "11", "12", "13", "08"))
+ORDER   <- c("01", "02", "03", "04", "12", "09", "11", "06", "13", "14", "05", "07", "10", "08")
+PRESETS <- list(rerun = c("12", "09", "11", "06", "13", "14", "08"),
+                paper = c("01", "02", "03", "04", "06", "09", "11", "12", "13", "14", "08"))
 MINUTES <- c("01" = "1", "02" = "60", "03" = "60", "04" = "45", "05" = "180",
              "06" = "30-60", "07" = "160", "09" = "20", "10" = "510", "11" = "20",
-             "12" = "1", "13" = "60-90", "08" = "2")
+             "12" = "1", "13" = "60-90", "14" = "12-17", "08" = "2")
 DML_STEPS <- c("06", "09", "11")
 # Files a step reads, named by the step that writes them
 NEEDS <- list(
@@ -220,7 +221,7 @@ preflight <- function(steps, preset) {
   }
   if ("08" %in% steps && !file.exists(file.path(RESULTS_DIR, "rstar_gate_power.csv")) &&
       !("13" %in% steps && grepl("B", GATE_PARTS)))
-    notes <- c(notes, "08 will skip Figure 2: results/rstar_gate_power.csv (13, part B) is missing")
+    notes <- c(notes, "08 will skip Figure 3: results/rstar_gate_power.csv (13, part B) is missing")
   if (any(c("03", "09", "11", "12") %in% steps)) {
     if (!("01" %in% steps) && !file.exists(file.path(SCRIPTS_DIR, "nhanes_mercury.csv")))
       notes <- c(notes, "scripts/nhanes_mercury.csv is missing (01 writes it): the NHANES rows will be NA")

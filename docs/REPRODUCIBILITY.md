@@ -19,7 +19,7 @@ load. It needs R 4.2 or later.
 ## 2. Run order
 
 `run_all.R` runs the steps in this order, each in a fresh R process:
-01, 02, 03, 04, 12, 09, 11, 06, 13, then 08. The scripts of the
+01, 02, 03, 04, 12, 09, 11, 06, 13, 14, then 08. The scripts of the
 MCUB-share rule (05, 07, 10) run only when listed.
 
 | Step | Script | Needs | Writes |
@@ -33,6 +33,7 @@ MCUB-share rule (05, 07, 10) run only when listed.
 | 11 | `11_diagnostics.R` | 01, 02, 03, 09, `data/*.dta`, `wooldridge`, MovieLens, DoubleML | `results/diagnostics.csv`, `results/ditella_late_diff.csv`, `results/dml_split_variation.csv` |
 | 06 | `06_structural_simulation.R` | DoubleML | `results/sim_dial_v7_results.rds`, `results/coef_vectors.rds` |
 | 13 | `13_rstar_gate_mc.R` | the code of 04 and 06 (parts C and D rebuild their samples) | `results/rstar_gate_mc_cells.csv`, `results/rstar_gate_power.csv`, `results/rstar_gate_synthetic.csv`, `results/rstar_gate_sim.csv` |
+| 14 | `14_hsic_rejection_mc.R` | `foundation/jp_dgp.R`, `foundation/rstar_gate.R`, `dHSIC` | `results/hsic_rejection_mc.csv` |
 | 08 | `08_figures.R` | 12, 09, 13 (part B) | `scripts/paper/figures/*.png` |
 | 05 | `05_montecarlo_validation.R` | `foundation/jp_dgp.R` | `results/table6_results.csv` |
 | 07 | `07_power_curve_grid.R` | nothing else | `results/cp_grid_summary_lean.csv` |
@@ -53,12 +54,13 @@ if the log of 06 does not report the DoubleML engine.
 | Table 5 (`tab:frontier`) | closed form, section 3 below |
 | Table 6 (`tab:frontier_emp`) | 12 |
 | Table 7 (`tab:gate_mc`) | 13, part A |
-| Table 8 (`tab:sim`) | 06 (estimates, MCUB sets); 13, part D (r*, CS_n, V) |
+| Table 8 (`tab:hsic_mc`) | 14 |
+| Table 9 (`tab:sim`) | 06 (estimates, MCUB sets); 13, part D (r*, CS_n, V) |
 | Figure 1 (`fig:architecture`) | 08, no inputs |
-| Figure 2 (`fig:power_curves`) | 08 from 13, part B |
-| Figure 3 (`fig:rstar`) | 08 from 12 |
+| Figure 2 (`fig:rstar`) | 08 from 12; file `fig3_rstar_domain.png` |
+| Figure 3 (`fig:power_curves`) | 08 from 13, part B; file `fig2_gate_power.png` |
 | Figure 4 (`fig:diagnostic_space`) | 08 from 12 and 09 |
-| Numbers in the text | 11: the Di Tella IV difference, the spread of R across sample splits, the scale m |
+| Numbers in the text | 11: the Di Tella IV difference, the spread of R across sample splits, the scale m; 14: the rejection rates of HSIC and the gate in Section 5.1 |
 
 ### Scripts 02 and 03
 
@@ -118,8 +120,8 @@ An interrupted run of 02 to 07 or 10 resumes where it stopped. The cache
 key of a rule call records the sample size, domain, alpha, number of
 resamples, seed, MCUB settings, sample correlations and resampling unit,
 so a changed setting starts a new entry. Delete a folder after you edit
-the MCUB code, or to force a fresh run. Scripts 09, 11, 12 and 13 keep no
-cache on disk.
+the MCUB code, or to force a fresh run. Scripts 09, 11, 12, 13 and 14 keep
+no cache on disk.
 
 ## 5. Quick checks
 
@@ -127,7 +129,9 @@ cache on disk.
   inputs, and lists the steps it would run.
 - Script 13: `DIAL_GATE_PARTS=A,C,D` skips part B, the power curves at
   n = 50,000, which take most of its time.
-- Script 06: `DIAL_SIM_ROWS=A,Rev,RevHid` runs only those rows of Table 8.
+- Script 14: `DIAL_HSIC_REPS=20` draws 20 samples per instrument instead
+  of 500, a quick test run.
+- Script 06: `DIAL_SIM_ROWS=A,Rev,RevHid` runs only those rows of Table 9.
 - Script 09: set `B_R <- 0L` to skip the DML refits; r* and its intervals
   then take seconds.
 - Script 11: `DIAL_N_SPLITS=0` skips the DML fits of the split
@@ -144,6 +148,6 @@ simulation. Rounding differences between computers can therefore move set
 endpoints in the third decimal and change bootstrap shares by a few
 resamples. Random-forest fits can also differ across `ranger` versions,
 which moves the DML estimates slightly, and `dml_fallback.R` gives
-slightly different DML estimates from DoubleML. Script 13 runs its cells
-in parallel only on Linux and macOS, which changes its run time, not its
-results. Run `sessionInfo()` to record the versions you use.
+slightly different DML estimates from DoubleML. Scripts 13 and 14 run
+their samples in parallel only on Linux and macOS, which changes their run
+time, not their results. Run `sessionInfo()` to record the versions you use.

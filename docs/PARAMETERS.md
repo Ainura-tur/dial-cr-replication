@@ -8,10 +8,10 @@ each one. Each script's header repeats its own settings.
 | Setting | Value | Where |
 |---|---|---|
 | Relevance gate | first-stage F < 10 gives C (weak) | `F_MIN` in 12; also 03 and 06 |
-| Validity gate | C unless the 90% confidence set CS_n for r* meets the closed domain D | `foundation/rstar_gate.R`, run by 12 and 13 |
-| Level alpha_0 of the gate | 0.05, so CS_n has coverage 0.90 | `ALPHA0` in 12 and 13 |
-| Resamples for se_n(r) | 1,000 for the empirical instruments and Tables 1 and 8; 500 in Table 7; 300 for the power curves | `B_GATE` in 12; `B_CD`, `B_A`, `B_B` in 13 |
-| Grid for r | step 0.001 in 12, 0.002 in 13, with the edges of D added | `STEP` in 12, `STEP_MC` in 13 |
+| Validity gate | C unless the 90% confidence set CS_n for r* meets the closed domain D | `foundation/rstar_gate.R`, run by 12, 13 and 14 |
+| Level alpha_0 of the gate | 0.05, so CS_n has coverage 0.90 | `ALPHA0` in 12, 13 and 14 |
+| Resamples for se_n(r) | 1,000 for the empirical instruments and Tables 1 and 9; 500 in Tables 7 and 8; 300 for the power curves | `B_GATE` in 12 and 14; `B_CD`, `B_A`, `B_B` in 13 |
+| Grid for r | step 0.001 in 12 and for Table 9 (13, part D); 0.002 for Tables 1, 7 and 8 and the power curves; the edges of D added | `STEP` in 12, `STEP_MC` in 13 and 14 |
 | Ratio rule | a resample lands in B when abs(log R) >= log tau_R or the IV and DML estimates differ in sign | 06, 09, 11 |
 | tau_R | 1.5, so A needs 1/1.5 < R < 1.5 | `TAU_R` in 06, 08, 09, 11 |
 | Agreement label | A if at most 10% of the 200 resamples land in B, B if at least 90% do, inconclusive otherwise | `B_R` in 09; `LABEL_LO`, `LABEL_HI` in 11; `TAU_L` in 08 |
@@ -90,7 +90,7 @@ opposite sign. It is a diagnostic and does not enter the tables.
 
 ## Monte Carlo of the gate (13)
 
-| Setting | Part A (Table 7) | Part B (Figure 2) |
+| Setting | Part A (Table 7) | Part B (Figure 3) |
 |---|---|---|
 | Design | rho_DU = 0.30, cor(Z, D) = 0.25 | rho_DU = 0.50, cor(Z, D) = 0.25 |
 | delta = cor(Z, U) | 0, 0.04, ..., 0.20, plus an edge cell (rho_DU = 0, delta = 0) | 13 values from 0 to 0.25 |
@@ -99,8 +99,26 @@ opposite sign. It is a diagnostic and does not enter the tables.
 | Domain, alpha_0 | (0, 0.8), 0.05 | (0, 0.8), 0.05 |
 | Master seed | 4242 | 4242 |
 
-Parts C and D apply the gate to the samples of Tables 1 and 8, which they
+Parts C and D apply the gate to the samples of Tables 1 and 9, which they
 rebuild by running the data-generating code of 04 and 06.
+
+## HSIC and the gate over repeated samples (14, `tab:hsic_mc`)
+
+| Setting | Value |
+|---|---|
+| Design | population version of the Jones-Pewsey design of 04: cor(Z, X) = 0.25, cor(X, U) = 0.30 or -0.30, Y = 2X + U; fixed population coefficients and fresh noise in every sample |
+| Instruments | the 11 grid instruments, cor(Z, U) from -0.20 to 0.20, and Z_het |
+| Domain | (-0.8, 0) with cor(X, U) = -0.30 when cor(Z, U) < 0; otherwise (0, 0.8) with cor(X, U) = 0.30 |
+| n | 800 |
+| Samples per instrument | 500 (`R_REPS`; the environment variable `DIAL_HSIC_REPS` overrides it) |
+| Gate | alpha_0 = 0.05, B = 500, grid step 0.002 (`ALPHA0`, `B_GATE`, `STEP_MC`) |
+| HSIC | `dHSIC::dhsic.test()` with the gamma approximation at the 5% level, testing z against e_hat = y - beta_IV x, as in 04 |
+| Seeds | master seed 5151; sample i of instrument k uses 5151 + 10000 k + i, and its gate uses that seed plus 1,000,000 |
+
+The results do not depend on the number of cores. `OPPOSITE_SIGN <- TRUE`
+adds the instruments with cor(Z, U) < 0 under cor(X, U) = 0.30 and
+D = (0, 0.8), the direction in which the gate has little power; the paper
+does not report these rows.
 
 ## Simulations
 

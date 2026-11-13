@@ -50,12 +50,12 @@ the folder exists, or the folder named in `DIAL_ML_DIR`.
 
 The scripts use `future` multisession workers (up to 7, one fewer than the
 physical cores). If workers run out of memory, lower `N_WORKERS` at the top
-of the script (05, 07, 09, 10). Script 13 runs its cells in parallel
-only on Linux and macOS; on Windows it uses one core. The MCUB-share rule
-takes its worker count
-from `dial_boot_plan()`: in 02 and 03, call `dial_boot_plan(2)` after
-sourcing the script and before running it; in 04 and 06, change the
-script's `dial_boot_plan()` call to `dial_boot_plan(2)`. Completed cells
+of the script (05, 07, 09, 10). Scripts 13 and 14 run their samples in
+parallel only on Linux and macOS; on Windows they use one core. The
+MCUB-share rule takes its worker count from `dial_boot_plan()`: in 02 and
+03, call `dial_boot_plan(2)` after sourcing the script and before running
+it; in 04 and 06, change the script's `dial_boot_plan()` call to
+`dial_boot_plan(2)`. Completed cells
 and resamples are cached, so a rerun resumes where the failed run stopped.
 
 ## Results differ slightly from the paper
@@ -75,9 +75,14 @@ run the script on its own with `Rscript`: it then uses
 `foundation/dml_fallback.R`, the same estimator, and its log says so. The
 estimates then differ slightly from the paper.
 
-## Figure 2 is missing
+## Figure 3 is missing
 
-`08_figures.R` draws Figure 2 from `results/rstar_gate_power.csv`, which
-part B of `13_rstar_gate_mc.R` writes. Run 13 with part B, or keep the CSV
-that the repository ships. Without the file, 08 skips Figure 2 and draws
-the other three.
+`08_figures.R` draws Figure 3, the power curves (file `fig2_gate_power.png`),
+from `results/rstar_gate_power.csv`, which part B of `13_rstar_gate_mc.R`
+writes. Run 13 with part B, or keep the CSV that the repository ships.
+Without the file, 08 skips Figure 3 and draws the other three.
+
+## "there is no package called 'dHSIC'"
+
+Scripts 04 and 14 run the HSIC test from the CRAN package `dHSIC`.
+`00_setup.R` installs it; otherwise run `install.packages("dHSIC")`.
